@@ -1,0 +1,14 @@
+{
+  "name": "fdeploy",
+  "version": "1.0.0",
+  "description": "Gerenciador de deploys via SSH para servidores Windows",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "node-ssh": "^13.2.0"
+  }
+}

@@ -1,0 +1,6 @@
+data/servidores.json
+uploads/*.exe
+uploads/*.bak
+.DS_Store
+node_modules/
+*.log
