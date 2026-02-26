@@ -257,6 +257,34 @@ body {
   border-bottom: 1px solid rgba(48,54,61,0.4);
 }
 
+/* ── Transfer progress ── */
+.transfer-progress {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(88,166,255,0.06);
+  border: 1px solid rgba(88,166,255,0.15);
+  border-radius: 6px;
+}
+.transfer-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.transfer-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.transfer-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #79c0ff);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
 /* ── Loader ── */
 .spinner {
   display: inline-block;
@@ -266,5 +294,7 @@ body {
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+  margin-right: 4px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
