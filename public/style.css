@@ -82,6 +82,44 @@ body {
   font-size: 13px;
   color: var(--text-muted);
 }
+/* ── Upload confirm (versao) ── */
+.upload-confirm {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: rgba(88,166,255,0.06);
+  border: 1px solid rgba(88,166,255,0.15);
+  border-radius: 6px;
+}
+.upload-confirm-file {
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+.upload-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.upload-confirm-row label {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.upload-confirm-row input {
+  width: 120px;
+  padding: 5px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+}
+.upload-confirm-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .progress-bar {
   height: 4px;
   background: var(--border);
@@ -125,6 +163,20 @@ body {
   gap: 8px;
   margin-bottom: 16px;
   flex-wrap: wrap;
+  align-items: center;
+}
+.toolbar input[type="text"] {
+  padding: 6px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  width: 200px;
+}
+.toolbar input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 /* ── Cards de servidor ── */
@@ -186,6 +238,30 @@ body {
 .log-erro { color: var(--red); }
 .log-progresso { color: var(--yellow); }
 .log-info { color: var(--text-muted); }
+
+/* ── Log colapsavel ── */
+.log-summary {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(88,166,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.log-toggle {
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.log-toggle:hover {
+  text-decoration: underline;
+}
 
 /* ── Modal ── */
 .modal-overlay {
@@ -298,3 +374,44 @@ body {
   margin-right: 4px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Version selector ── */
+.versao-selector {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(88,166,255,0.06);
+  border: 1px solid rgba(88,166,255,0.15);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.versao-selector label {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.versao-selector select {
+  flex: 1;
+  max-width: 200px;
+  padding: 5px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+}
+.versao-selector select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ── Badges atualizado/desatualizado ── */
+.badge-atualizado {
+  background: rgba(63,185,80,0.15);
+  color: var(--green);
+}
+.badge-desatualizado {
+  background: rgba(210,153,34,0.15);
+  color: var(--yellow);
+}

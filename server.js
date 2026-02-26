@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const zlib = require('zlib');
 const crypto = require('crypto');
+const { spawn } = require('child_process');
 const { NodeSSH } = require('node-ssh');
 
 const app = express();
@@ -22,14 +23,17 @@ const DATA_DIR = path.join(__dirname, 'data');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 const SERVIDORES_PATH = path.join(DATA_DIR, 'servidores.json');
 const DEPLOY_LOG_PATH = path.join(DATA_DIR, 'deploy_log.json');
+const VERSAO_PATH = path.join(DATA_DIR, 'versao.json');
+const VERSOES_DIR = path.join(DATA_DIR, 'versoes');
 
 // ── Garantir que diretórios existam ──
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+if (!fs.existsSync(VERSOES_DIR)) fs.mkdirSync(VERSOES_DIR, { recursive: true });
 
 // ── Caminhos remotos (Windows) ──
 const REMOTE_EXE = 'C:\\f\\Fvendas2.0\\Fvendas2.0.exe';
-const REMOTE_BAK = 'C:\\f\\Fvendas2.0\\Fvendas2.0.exe.bak';
+const REMOTE_BAK = 'C:\\f\\Fvendas2.0\\Fvendas2.0Old.exe';
 const REMOTE_DIR = 'C:\\f\\Fvendas2.0';
 const REMOTE_PKG = 'C:\\f\\Fvendas2.0\\package.json';
 const SERVICE_NAME = 'Fvendas2.0';
@@ -74,6 +78,47 @@ function salvarDeployLog(entry) {
   fs.writeFileSync(DEPLOY_LOG_PATH, JSON.stringify(logs, null, 2), 'utf8');
 }
 
+function lerVersaoData() {
+  if (!fs.existsSync(VERSAO_PATH)) return { ativa: null, versoes: [] };
+  try {
+    const data = JSON.parse(fs.readFileSync(VERSAO_PATH, 'utf8'));
+    // Migrar formato antigo { versao: "x" } → { ativa: "x", versoes: ["x"] }
+    if (data.versao && !data.ativa) {
+      return { ativa: data.versao, versoes: [data.versao] };
+    }
+    return { ativa: data.ativa || null, versoes: data.versoes || [] };
+  } catch (_) { return { ativa: null, versoes: [] }; }
+}
+
+function lerVersao() {
+  return lerVersaoData().ativa;
+}
+
+function salvarVersaoData(data) {
+  fs.writeFileSync(VERSAO_PATH, JSON.stringify(data, null, 2), 'utf8');
+}
+
+function salvarVersao(versao) {
+  const data = lerVersaoData();
+  data.ativa = versao;
+  if (!data.versoes.includes(versao)) data.versoes.push(versao);
+  salvarVersaoData(data);
+}
+
+function compararVersoes(a, b) {
+  if (!a || !b) return 0;
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const na = pa[i] || 0;
+    const nb = pb[i] || 0;
+    if (na < nb) return -1;
+    if (na > nb) return 1;
+  }
+  return 0;
+}
+
 async function conectarSSH(servidor) {
   const ssh = new NodeSSH();
   await ssh.connect({
@@ -92,6 +137,215 @@ async function conectarSSH(servidor) {
     });
   }
   return ssh;
+}
+
+// ── Executar script PowerShell local (non-blocking, via arquivo temp) ──
+function executarPowerShell(script, timeout = 120000) {
+  const tmpFile = path.join(UPLOADS_DIR, `_ps_${Date.now()}.ps1`);
+  fs.writeFileSync(tmpFile, script, 'utf8');
+
+  return new Promise((resolve, reject) => {
+    const ps = spawn('powershell', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', tmpFile]);
+    let stdout = '';
+    let stderr = '';
+    const timer = setTimeout(() => { ps.kill(); try { fs.unlinkSync(tmpFile); } catch (_) {} reject(new Error('PowerShell timeout')); }, timeout);
+    ps.stdout.on('data', d => { stdout += d.toString(); });
+    ps.stderr.on('data', d => { stderr += d.toString(); });
+    ps.on('close', code => { clearTimeout(timer); try { fs.unlinkSync(tmpFile); } catch (_) {} resolve({ code, stdout, stderr }); });
+    ps.on('error', err => { clearTimeout(timer); try { fs.unlinkSync(tmpFile); } catch (_) {} reject(err); });
+  });
+}
+
+// ── Instalar OpenSSH remotamente via WMI/DCOM (porta 135) ──
+async function instalarSSHRemoto(servidor, logMsg) {
+  const ip = servidor.ip;
+  const usuario = servidor.usuario;
+  const senha = decrypt(servidor.senha);
+  const senhaEscaped = senha.replace(/'/g, "''");
+
+  // Debug: salvar cada script num arquivo para inspecao
+  const debugFile = path.join(__dirname, 'debug_wmi.txt');
+  let debugIdx = 0;
+
+  // Helper: executa script PS com sessao CIM e retorna stdout
+  async function cimExec(label, body) {
+    const script = `
+try {
+  $ErrorActionPreference = 'Stop'
+  $secPass = ConvertTo-SecureString '${senhaEscaped}' -AsPlainText -Force
+  $cred = New-Object System.Management.Automation.PSCredential('${usuario}', $secPass)
+  $so = New-CimSessionOption -Protocol Dcom
+  $session = New-CimSession -ComputerName '${ip}' -Credential $cred -SessionOption $so -OperationTimeoutSec 30
+  ${body}
+  Remove-CimSession $session
+} catch {
+  Write-Host "ERRO:$($_.Exception.Message)"
+}
+`;
+    // Salvar script no debug
+    debugIdx++;
+    const separator = `\n${'='.repeat(60)}\n[${debugIdx}] ${label}\n${'='.repeat(60)}\n`;
+    fs.appendFileSync(debugFile, separator + script + '\n', 'utf8');
+
+    const result = await executarPowerShell(script);
+    const out = (result.stdout || '').trim();
+    const err = (result.stderr || '').trim();
+
+    // Salvar resultado no debug
+    fs.appendFileSync(debugFile, `--- RESULTADO [${label}] ---\nstdout: ${out}\nstderr: ${err}\ncode: ${result.code}\n\n`, 'utf8');
+
+    console.log(`[WMI ${ip}] ${label}: stdout=${out}${err ? ' | stderr=' + err : ''}`);
+    return out;
+  }
+
+  logMsg('Conexao SSH falhou neste servidor', 'erro');
+  logMsg(`Verificando OpenSSH via WMI/DCOM (${ip})...`, 'progresso');
+
+  try {
+    // ── Passo 1: Verificar se servico sshd existe ──
+    logMsg('Conectando via WMI (porta 135)...', 'progresso');
+    const check = await cimExec('check-sshd', `
+$svc = Get-CimInstance -CimSession $session -ClassName Win32_Service -Filter "Name='sshd'" -ErrorAction SilentlyContinue
+if ($svc) { Write-Host "SSHD:$($svc.State)" } else { Write-Host "SSHD:NAO_EXISTE" }
+`);
+
+    if (check.includes('ERRO:')) {
+      logMsg(`Erro ao conectar via WMI: ${check.split('ERRO:').pop()}`, 'erro');
+      return false;
+    }
+
+    // ── Passo 2: Instalar se nao existe ──
+    if (check.includes('SSHD:NAO_EXISTE')) {
+      logMsg('OpenSSH Server NAO esta instalado', 'erro');
+
+      // Instalar via schtasks (tarefa agendada com /rl HIGHEST para elevacao real)
+      logMsg('Criando tarefa agendada para instalar OpenSSH com privilegios elevados...', 'progresso');
+      const installScript = `
+$taskName = 'FDeploy_InstallSSH'
+$dismCmd = 'dism.exe /Online /Add-Capability /CapabilityName:OpenSSH.Server~~~~0.0.1.0'
+schtasks /create /s '${ip}' /u '${usuario}' /p '${senha}' /tn $taskName /tr $dismCmd /sc once /st 00:00 /f /rl HIGHEST 2>&1
+$createResult = $LASTEXITCODE
+if ($createResult -ne 0) { Write-Host "TASK_ERRO_CREATE:$createResult"; return }
+Write-Host 'TASK_CRIADA'
+schtasks /run /s '${ip}' /u '${usuario}' /p '${senha}' /tn $taskName 2>&1
+$runResult = $LASTEXITCODE
+if ($runResult -ne 0) { Write-Host "TASK_ERRO_RUN:$runResult"; return }
+Write-Host 'TASK_EXECUTANDO'
+`;
+      const install = await executarPowerShell(installScript);
+      const installOut = (install.stdout || '').trim();
+      const installErr = (install.stderr || '').trim();
+
+      // Debug
+      debugIdx++;
+      fs.appendFileSync(debugFile, `\n${'='.repeat(60)}\n[${debugIdx}] schtasks-install\n${'='.repeat(60)}\n${installScript}\n--- RESULTADO ---\nstdout: ${installOut}\nstderr: ${installErr}\ncode: ${install.code}\n\n`, 'utf8');
+      console.log(`[SCHTASKS ${ip}] stdout: ${installOut}`);
+      if (installErr) console.log(`[SCHTASKS ${ip}] stderr: ${installErr}`);
+
+      if (!installOut.includes('TASK_EXECUTANDO')) {
+        logMsg(`Falha ao criar/executar tarefa: ${installOut} ${installErr}`, 'erro');
+        return false;
+      }
+      logMsg('Tarefa de instalacao executando com privilegios elevados!', 'sucesso');
+
+      // Monitorar status do servico sshd ate ficar Running
+      logMsg('Monitorando instalacao...', 'progresso');
+      let sshdOk = false;
+      for (let i = 1; i <= 80; i++) {
+        await new Promise(r => setTimeout(r, 15000));
+        const status = await cimExec(`poll-${i}`, `
+$svc = Get-CimInstance -CimSession $session -ClassName Win32_Service -Filter "Name='sshd'" -ErrorAction SilentlyContinue
+if ($svc) { Write-Host "SSHD:$($svc.State)" } else {
+  $dism = Get-CimInstance -CimSession $session -ClassName Win32_Process -Filter "Name='dism.exe'" -ErrorAction SilentlyContinue
+  $tiw = Get-CimInstance -CimSession $session -ClassName Win32_Process -Filter "Name='TiWorker.exe'" -ErrorAction SilentlyContinue
+  if ($dism -or $tiw) { Write-Host "SSHD:INSTALANDO" } else { Write-Host "SSHD:NAO_EXISTE" }
+}
+`);
+        if (status.includes('SSHD:Running')) {
+          logMsg(`Servico sshd rodando! (${i * 15}s)`, 'sucesso');
+          sshdOk = true;
+          break;
+        } else if (status.includes('SSHD:Stopped')) {
+          logMsg(`Servico sshd instalado mas parado (${i * 15}s). Configurando e iniciando...`, 'progresso');
+          await cimExec('configure-start-sshd', `
+$svc = Get-CimInstance -CimSession $session -ClassName Win32_Service -Filter "Name='sshd'"
+Invoke-CimMethod -InputObject $svc -MethodName ChangeStartMode -Arguments @{StartMode='Automatic'} | Out-Null
+Invoke-CimMethod -InputObject $svc -MethodName StartService | Out-Null
+`)
+          // Firewall via processo remoto
+          await cimExec('firewall-install', `
+$fwCmd = 'netsh advfirewall firewall add rule name=sshd dir=in action=allow protocol=TCP localport=22 profile=any'
+Invoke-CimMethod -CimSession $session -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine="cmd.exe /c $fwCmd"} | Out-Null
+`);
+        } else if (status.includes('SSHD:INSTALANDO')) {
+          logMsg(`DISM instalando... (${i * 15}s)`, 'progresso');
+        } else if (status.includes('SSHD:NAO_EXISTE')) {
+          logMsg(`Aguardando instalacao... sshd ainda nao existe (${i * 15}s)`, 'progresso');
+        } else {
+          logMsg(`Status sshd: ${status} (${i * 15}s)`, 'progresso');
+        }
+      }
+      if (!sshdOk) {
+        logMsg('Servico sshd nao iniciou apos 20 minutos', 'erro');
+        return false;
+      }
+
+    } else if (check.includes('SSHD:Stopped')) {
+      // ── sshd existe mas parado ──
+      logMsg('Servico sshd existe mas esta PARADO', 'progresso');
+      logMsg('Iniciando servico sshd...', 'progresso');
+      const start = await cimExec('start-sshd', `
+Invoke-CimMethod -CimSession $session -ClassName Win32_Service -Filter "Name='sshd'" -MethodName StartService | Out-Null
+Start-Sleep -Seconds 5
+$svc = Get-CimInstance -CimSession $session -ClassName Win32_Service -Filter "Name='sshd'"
+Write-Host "SSHD:$($svc.State)"
+`);
+      if (start.includes('SSHD:Running')) {
+        logMsg('Servico sshd iniciado!', 'sucesso');
+      } else {
+        logMsg(`Falha ao iniciar sshd: ${start}`, 'erro');
+        return false;
+      }
+
+    } else if (check.includes('SSHD:Running')) {
+      // ── sshd ja rodando — problema pode ser firewall ──
+      logMsg('Servico sshd ja esta rodando', 'sucesso');
+      logMsg('Adicionando regra de firewall (porta 22, todos os perfis)...', 'progresso');
+      await cimExec('firewall', `
+$cmd = 'powershell.exe -NoProfile -Command "if (!(Get-NetFirewallRule -Name sshd -ErrorAction SilentlyContinue)) { New-NetFirewallRule -Name sshd -DisplayName OpenSSH-Server -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22 -Profile Any | Out-Null; Write-Host CRIADA } else { Write-Host EXISTE }"'
+Invoke-CimMethod -CimSession $session -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine=$cmd} | Out-Null
+Write-Host 'FW_OK'
+`);
+      logMsg('Regra de firewall verificada', 'sucesso');
+    }
+
+    // ── Passo 3: Testar conexao SSH ──
+    logMsg('Testando conexao SSH...', 'progresso');
+    for (let i = 1; i <= 4; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      try {
+        const testSSH = new NodeSSH();
+        await testSSH.connect({
+          host: ip,
+          port: servidor.porta || 22,
+          username: usuario,
+          password: senha,
+          readyTimeout: 15000,
+        });
+        testSSH.dispose();
+        logMsg('Conexao SSH estabelecida com sucesso!', 'sucesso');
+        return true;
+      } catch (sshErr) {
+        logMsg(`Tentativa SSH ${i}/4 falhou: ${sshErr.message}`, i < 4 ? 'progresso' : 'erro');
+      }
+    }
+
+    logMsg('SSH nao ficou acessivel. Verifique firewall e rede', 'erro');
+    return false;
+  } catch (err) {
+    logMsg(`Erro na comunicacao WMI: ${err.message}`, 'erro');
+    return false;
+  }
 }
 
 async function obterVersaoRemota(ssh) {
@@ -177,6 +431,7 @@ app.get('/api/servidores', (req, res) => {
     ...s,
     senha: undefined,
     temSenha: !!s.senha,
+    versaoDeployada: s.versaoDeployada || null,
   }));
   res.json(servidores);
 });
@@ -248,16 +503,88 @@ app.post('/api/upload', (req, res) => {
 
 app.get('/api/upload/status', (req, res) => {
   const exePath = path.join(UPLOADS_DIR, 'Fvendas2.0.exe');
-  if (!fs.existsSync(exePath)) {
-    return res.json({ disponivel: false });
+  const vData = lerVersaoData();
+
+  // Listar versoes do cache
+  const versoes = [];
+  if (fs.existsSync(VERSOES_DIR)) {
+    const files = fs.readdirSync(VERSOES_DIR).filter(f => f.endsWith('.gz'));
+    for (const f of files) {
+      versoes.push(f.replace('.gz', ''));
+    }
   }
-  const stats = fs.statSync(exePath);
-  res.json({
-    disponivel: true,
-    arquivo: 'Fvendas2.0.exe',
-    tamanho_mb: (stats.size / 1024 / 1024).toFixed(1),
-    modificado_em: stats.mtime.toISOString(),
-  });
+  versoes.sort((a, b) => compararVersoes(b, a));
+
+  if (!fs.existsSync(exePath) && versoes.length === 0) {
+    return res.json({ disponivel: false, versoes: [] });
+  }
+
+  const result = { disponivel: true, versao: vData.ativa, versoes };
+  if (fs.existsSync(exePath)) {
+    const stats = fs.statSync(exePath);
+    result.arquivo = 'Fvendas2.0.exe';
+    result.tamanho_mb = (stats.size / 1024 / 1024).toFixed(1);
+    result.modificado_em = stats.mtime.toISOString();
+  }
+  res.json(result);
+});
+
+// ── Versao ──
+app.post('/api/versao', async (req, res) => {
+  const { versao } = req.body;
+  if (!versao) return res.status(400).json({ erro: 'Versao e obrigatoria' });
+
+  const exePath = path.join(UPLOADS_DIR, 'Fvendas2.0.exe');
+  const gzDest = path.join(VERSOES_DIR, `${versao}.gz`);
+
+  // Compactar e salvar no cache de versoes
+  if (fs.existsSync(exePath)) {
+    try {
+      await compactarArquivo(exePath, gzDest);
+      console.log(`[Versao] Compactado e salvo: ${gzDest}`);
+    } catch (err) {
+      console.error(`[Versao] Erro ao compactar: ${err.message}`);
+      return res.status(500).json({ erro: 'Falha ao compactar arquivo' });
+    }
+  }
+
+  salvarVersao(versao);
+  res.json({ ok: true, versao });
+});
+
+// ── Listar versoes ──
+app.get('/api/versoes', (req, res) => {
+  const data = lerVersaoData();
+  const versoes = [];
+  if (fs.existsSync(VERSOES_DIR)) {
+    const files = fs.readdirSync(VERSOES_DIR).filter(f => f.endsWith('.gz'));
+    for (const f of files) {
+      const ver = f.replace('.gz', '');
+      const stats = fs.statSync(path.join(VERSOES_DIR, f));
+      versoes.push({ versao: ver, tamanho: stats.size, tamanho_mb: (stats.size / 1024 / 1024).toFixed(1) });
+    }
+  }
+  // Ordenar por versao decrescente
+  versoes.sort((a, b) => compararVersoes(b.versao, a.versao));
+  res.json({ ativa: data.ativa, versoes });
+});
+
+// ── Selecionar versao existente ──
+app.post('/api/versao/selecionar', (req, res) => {
+  const { versao } = req.body;
+  if (!versao) return res.status(400).json({ erro: 'Versao e obrigatoria' });
+
+  const gzPath = path.join(VERSOES_DIR, `${versao}.gz`);
+  if (!fs.existsSync(gzPath)) {
+    return res.status(404).json({ erro: `Versao ${versao} nao encontrada no cache` });
+  }
+
+  const data = lerVersaoData();
+  data.ativa = versao;
+  if (!data.versoes.includes(versao)) data.versoes.push(versao);
+  salvarVersaoData(data);
+
+  res.json({ ok: true, versao });
 });
 
 // ══════════════════════════════════════════
@@ -311,6 +638,78 @@ app.post('/api/servico/:id/parar', async (req, res) => {
 // ROTAS — TESTAR / VERSAO
 // ══════════════════════════════════════════
 
+// ── SSE: Testar servidor com streaming (para acompanhar instalacao SSH) ──
+app.get('/api/testar/:id/stream', (req, res) => {
+  req.setTimeout(5 * 60 * 1000);
+  res.setTimeout(5 * 60 * 1000);
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  });
+
+  const servidores = lerServidores();
+  const servidor = servidores.find(s => s.id === req.params.id);
+  if (!servidor) {
+    res.write(`data: ${JSON.stringify({ evento: 'resultado', conectou: false, erro: 'Servidor nao encontrado' })}\n\n`);
+    res.end();
+    return;
+  }
+
+  function emit(data) {
+    try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch (_) {}
+  }
+
+  function logEtapa(msg, tipo) {
+    const ts = new Date().toLocaleTimeString('pt-BR');
+    emit({ evento: 'log', ts, msg, tipo: tipo || 'progresso' });
+    console.log(`[Testar ${servidor.nome}] ${msg}`);
+  }
+
+  (async () => {
+    let ssh;
+    try {
+      logEtapa('Conectando via SSH...', 'progresso');
+      ssh = await conectarSSH(servidor);
+    } catch (sshErr) {
+      logEtapa(`Falha na conexao SSH: ${sshErr.message}`, 'erro');
+      const instalou = await instalarSSHRemoto(servidor, logEtapa);
+      if (instalou) {
+        logEtapa('Reconectando via SSH...', 'progresso');
+        try {
+          ssh = await conectarSSH(servidor);
+          logEtapa('SSH conectado apos instalacao!', 'sucesso');
+        } catch (retryErr) {
+          logEtapa(`SSH falhou apos instalacao: ${retryErr.message}`, 'erro');
+          emit({ evento: 'resultado', conectou: false });
+          res.end();
+          return;
+        }
+      } else {
+        emit({ evento: 'resultado', conectou: false });
+        res.end();
+        return;
+      }
+    }
+
+    try {
+      logEtapa('Conectado! Verificando servico...', 'sucesso');
+      const servico_status = await obterStatusServico(ssh);
+      const versao_atual = await obterVersaoRemota(ssh);
+      ssh.dispose();
+      logEtapa(`Servico: ${servico_status} | Versao: ${versao_atual || '?'}`, 'sucesso');
+      emit({ evento: 'resultado', conectou: true, servico_status, versao_atual });
+    } catch (err) {
+      if (ssh) ssh.dispose();
+      logEtapa(`Erro: ${err.message}`, 'erro');
+      emit({ evento: 'resultado', conectou: false });
+    }
+    res.end();
+  })();
+});
+
+// ── POST: Testar (fallback sem streaming) ──
 app.post('/api/testar/:id', async (req, res) => {
   const servidores = lerServidores();
   const servidor = servidores.find(s => s.id === req.params.id);
@@ -368,25 +767,60 @@ async function executarDeploy(servidor, emit) {
     if (emit) emit({ evento: 'log', ...entry });
   }
 
-  const gzLocal = path.join(UPLOADS_DIR, 'Fvendas2.0.exe.gz');
   const REMOTE_GZ = REMOTE_EXE + '.gz';
+  const versaoAtual = lerVersao();
+  let gzLocal = null;
+  let usouCache = false;
 
   try {
-    const exeLocal = path.join(UPLOADS_DIR, 'Fvendas2.0.exe');
-    if (!fs.existsSync(exeLocal)) {
-      logMsg('Nenhum .exe disponivel em uploads/', 'erro');
-      throw new Error('Nenhum .exe disponivel');
+    // 1. Usar .gz do cache de versoes ou compactar do .exe
+    if (versaoAtual) {
+      const gzCache = path.join(VERSOES_DIR, `${versaoAtual}.gz`);
+      if (fs.existsSync(gzCache)) {
+        gzLocal = gzCache;
+        usouCache = true;
+        const compSize = fs.statSync(gzCache).size;
+        logMsg(`Usando cache da versao ${versaoAtual} (${formatMB(compSize)} MB)`, 'sucesso');
+      }
     }
 
-    // 1. Compactar localmente
-    logMsg('Compactando arquivo...', 'progresso');
-    const { origSize, compSize } = await compactarArquivo(exeLocal, gzLocal);
-    const reducao = (100 - (compSize / origSize) * 100).toFixed(0);
-    logMsg(`Arquivo compactado: ${formatMB(origSize)} MB → ${formatMB(compSize)} MB (-${reducao}%)`, 'sucesso');
+    if (!gzLocal) {
+      const exeLocal = path.join(UPLOADS_DIR, 'Fvendas2.0.exe');
+      if (!fs.existsSync(exeLocal)) {
+        logMsg('Nenhum .exe disponivel em uploads/', 'erro');
+        throw new Error('Nenhum .exe disponivel');
+      }
 
-    // 2. Conectar
+      gzLocal = path.join(UPLOADS_DIR, 'Fvendas2.0.exe.gz');
+      logMsg('Compactando arquivo...', 'progresso');
+      const { origSize, compSize } = await compactarArquivo(exeLocal, gzLocal);
+      const reducao = (100 - (compSize / origSize) * 100).toFixed(0);
+      logMsg(`Arquivo compactado: ${formatMB(origSize)} MB → ${formatMB(compSize)} MB (-${reducao}%)`, 'sucesso');
+
+      // Salvar no cache se tiver versao
+      if (versaoAtual) {
+        const gzCache = path.join(VERSOES_DIR, `${versaoAtual}.gz`);
+        fs.copyFileSync(gzLocal, gzCache);
+        logMsg(`Cache salvo para versao ${versaoAtual}`, 'sucesso');
+      }
+    }
+
+    const compSize = fs.statSync(gzLocal).size;
+
+    // 2. Conectar (com fallback para instalar OpenSSH)
     logMsg('Conectando via SSH...', 'progresso');
-    ssh = await conectarSSH(servidor);
+    try {
+      ssh = await conectarSSH(servidor);
+    } catch (sshErr) {
+      logMsg(`Falha na conexao SSH: ${sshErr.message}`, 'erro');
+      const instalou = await instalarSSHRemoto(servidor, logMsg);
+      if (instalou) {
+        logMsg('Tentando conectar via SSH novamente...', 'progresso');
+        ssh = await conectarSSH(servidor);
+      } else {
+        throw sshErr;
+      }
+    }
     logMsg('Conectado!', 'sucesso');
 
     // 3. Parar serviço
@@ -400,13 +834,16 @@ async function executarDeploy(servidor, emit) {
     // 4. Backup
     logMsg('Fazendo backup do .exe atual...', 'progresso');
     await ssh.execCommand(`del "${REMOTE_BAK}" 2>nul`);
-    const renameResult = await ssh.execCommand(`rename "${REMOTE_EXE}" "Fvendas2.0.exe.bak"`);
+    const renameResult = await ssh.execCommand(`rename "${REMOTE_EXE}" "Fvendas2.0Old.exe"`);
     if (renameResult.code !== 0 && !renameResult.stderr.includes('cannot find')) {
       logMsg(`Aviso no backup: ${renameResult.stderr}`, 'progresso');
     }
     logMsg('Backup concluido', 'sucesso');
 
-    // 5. Upload SFTP com progresso
+    // 5. Garantir que diretório remoto exista
+    await ssh.execCommand(`if not exist "${REMOTE_DIR}" mkdir "${REMOTE_DIR}"`);
+
+    // 6. Upload SFTP com progresso
     logMsg('Copiando arquivo para servidor de destino...', 'progresso');
     if (emit) emit({ evento: 'transferencia_inicio', total: compSize });
 
@@ -432,20 +869,28 @@ async function executarDeploy(servidor, emit) {
       throw new Error(`Falha ao descompactar: ${errMsg}`);
     }
 
-    // 7. Limpar .gz remoto
+    // 7. Criar package.json com versao no servidor remoto
+    if (versaoAtual) {
+      logMsg(`Gravando versao ${versaoAtual} no servidor...`, 'progresso');
+      const pkgCmd = `powershell -NoProfile -Command "@{version='${versaoAtual}'} | ConvertTo-Json -Compress | Set-Content '${REMOTE_PKG}'"`;
+      await ssh.execCommand(pkgCmd);
+      logMsg(`Versao ${versaoAtual} gravada`, 'sucesso');
+    }
+
+    // 8. Limpar .gz remoto
     await ssh.execCommand(`del "${REMOTE_GZ}" 2>nul`);
 
-    // 8. Excluir log.txt antigo
+    // 9. Excluir log.txt antigo
     logMsg('Excluindo log antigo...', 'progresso');
     await ssh.execCommand(`del "${REMOTE_DIR}\\log.txt" 2>nul`);
     logMsg('Log antigo excluido', 'sucesso');
 
-    // 9. Iniciar serviço
+    // 10. Iniciar serviço
     logMsg('Iniciando servico...', 'progresso');
     await ssh.execCommand(`net start ${SERVICE_NAME}`);
     logMsg('Comando net start executado', 'sucesso');
 
-    // 10. Verificar serviço
+    // 11. Verificar serviço
     logMsg('Verificando servico...', 'progresso');
     await new Promise(r => setTimeout(r, 3000));
     const status = await obterStatusServico(ssh);
@@ -455,7 +900,17 @@ async function executarDeploy(servidor, emit) {
       logMsg(`Servico rodando! Versao: ${versao || '?'}`, 'sucesso');
       sucesso = true;
 
-      // 11. Aguardar log.txt ser gerado e ler conteudo
+      // Rastrear versao deployada no servidor
+      if (versaoAtual) {
+        const servidores = lerServidores();
+        const idx = servidores.findIndex(s => s.id === servidor.id);
+        if (idx !== -1) {
+          servidores[idx].versaoDeployada = versaoAtual;
+          salvarServidores(servidores);
+        }
+      }
+
+      // 12. Aguardar log.txt ser gerado e ler conteudo
       logMsg('Aguardando log de inicializacao...', 'progresso');
       let logConteudo = null;
       for (let i = 0; i < 10; i++) {
@@ -495,7 +950,10 @@ async function executarDeploy(servidor, emit) {
     logMsg(`ERRO: ${err.message}`, 'erro');
   } finally {
     if (ssh) ssh.dispose();
-    try { if (fs.existsSync(gzLocal)) fs.unlinkSync(gzLocal); } catch (_) {}
+    // Só apagar .gz temporario (nao apagar o cache de versoes)
+    if (!usouCache && gzLocal) {
+      try { if (fs.existsSync(gzLocal)) fs.unlinkSync(gzLocal); } catch (_) {}
+    }
   }
 
   const duracao = ((Date.now() - inicio) / 1000).toFixed(1);
@@ -513,6 +971,66 @@ async function executarDeploy(servidor, emit) {
 
   return entry;
 }
+
+// ── POST: Deploy todos (fallback sem streaming) ──
+app.post('/api/deploy/todos', async (req, res) => {
+  req.setTimeout(15 * 60 * 1000);
+  res.setTimeout(15 * 60 * 1000);
+  const servidores = lerServidores();
+  if (servidores.length === 0) return res.json([]);
+  const results = await Promise.allSettled(
+    servidores.map(s => executarDeploy(s))
+  );
+  res.json(results.map(r => r.status === 'fulfilled' ? r.value : { erro: r.reason?.message }));
+});
+
+// ── SSE: Deploy de todos com streaming (sequencial) ──
+app.get('/api/deploy/todos/stream', (req, res) => {
+  req.setTimeout(60 * 60 * 1000);
+  res.setTimeout(60 * 60 * 1000);
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  });
+
+  const servidores = lerServidores();
+  if (servidores.length === 0) {
+    res.write(`data: ${JSON.stringify({ evento: 'concluido_todos', resultados: [] })}\n\n`);
+    res.end();
+    return;
+  }
+
+  function emit(servidorId, data) {
+    try { res.write(`data: ${JSON.stringify({ servidorId, ...data })}\n\n`); } catch (_) {}
+  }
+
+  (async () => {
+    const versaoAtiva = lerVersao();
+    const resultados = [];
+    for (const s of servidores) {
+      // Pular servidores ja na versao ativa
+      if (versaoAtiva && s.versaoDeployada && s.versaoDeployada === versaoAtiva) {
+        emit(s.id, { evento: 'deploy_pulado', versao: versaoAtiva });
+        resultados.push({ servidorId: s.id, sucesso: true, pulado: true });
+        continue;
+      }
+
+      emit(s.id, { evento: 'deploy_iniciando' });
+      try {
+        const result = await executarDeploy(s, (data) => emit(s.id, data));
+        emit(s.id, { evento: 'concluido', sucesso: result.sucesso, log: result.log, duracao: result.duracao });
+        resultados.push({ servidorId: s.id, ...result });
+      } catch (err) {
+        emit(s.id, { evento: 'concluido', sucesso: false, erro: err.message });
+        resultados.push({ servidorId: s.id, erro: err.message });
+      }
+    }
+    res.write(`data: ${JSON.stringify({ evento: 'concluido_todos', resultados })}\n\n`);
+    res.end();
+  })();
+});
 
 // ── SSE: Deploy de um servidor com streaming ──
 app.get('/api/deploy/:id/stream', (req, res) => {
@@ -559,51 +1077,6 @@ app.post('/api/deploy/:id', async (req, res) => {
   if (!servidor) return res.status(404).json({ erro: 'Servidor não encontrado' });
   const result = await executarDeploy(servidor);
   res.json(result);
-});
-
-app.post('/api/deploy/todos', async (req, res) => {
-  req.setTimeout(15 * 60 * 1000);
-  res.setTimeout(15 * 60 * 1000);
-  const servidores = lerServidores();
-  if (servidores.length === 0) return res.json([]);
-  const results = await Promise.allSettled(
-    servidores.map(s => executarDeploy(s))
-  );
-  res.json(results.map(r => r.status === 'fulfilled' ? r.value : { erro: r.reason?.message }));
-});
-
-// ── SSE: Deploy de todos com streaming ──
-app.get('/api/deploy/todos/stream', (req, res) => {
-  req.setTimeout(15 * 60 * 1000);
-  res.setTimeout(15 * 60 * 1000);
-
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-  });
-
-  const servidores = lerServidores();
-  if (servidores.length === 0) {
-    res.write(`data: ${JSON.stringify({ evento: 'concluido_todos', resultados: [] })}\n\n`);
-    res.end();
-    return;
-  }
-
-  function emit(servidorId, data) {
-    try { res.write(`data: ${JSON.stringify({ servidorId, ...data })}\n\n`); } catch (_) {}
-  }
-
-  Promise.allSettled(
-    servidores.map(s => executarDeploy(s, (data) => emit(s.id, data)))
-  ).then(results => {
-    const resultados = results.map((r, i) => ({
-      servidorId: servidores[i].id,
-      ...(r.status === 'fulfilled' ? r.value : { erro: r.reason?.message }),
-    }));
-    res.write(`data: ${JSON.stringify({ evento: 'concluido_todos', resultados })}\n\n`);
-    res.end();
-  });
 });
 
 // ── Histórico ──

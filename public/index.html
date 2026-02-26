@@ -23,14 +23,29 @@
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fileInput').click()">Selecionar arquivo</button>
       <input type="file" id="fileInput" accept=".exe" style="display:none">
     </div>
+    <div class="upload-confirm" id="uploadConfirm" style="display:none">
+      <div class="upload-confirm-file" id="uploadFileName"></div>
+      <div class="upload-confirm-row">
+        <label for="inputVersao">Versao:</label>
+        <input type="text" id="inputVersao" placeholder="Ex: 1.2.0">
+        <button class="btn btn-primary btn-sm" onclick="confirmarUpload()">Enviar</button>
+        <button class="btn btn-ghost btn-sm" onclick="cancelarUpload()">Cancelar</button>
+      </div>
+    </div>
     <div class="progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
     <div class="upload-info" id="uploadInfo" style="display:none"></div>
+    <div class="versao-selector" id="versaoSelector" style="display:none">
+      <label for="selectVersao">Versoes salvas:</label>
+      <select id="selectVersao"></select>
+      <button class="btn btn-primary btn-sm" onclick="selecionarVersaoExistente()">Usar esta versao</button>
+    </div>
   </div>
 
   <!-- Servidores -->
   <div class="section">
     <div class="section-title">Servidores</div>
     <div class="toolbar">
+      <input type="text" id="buscarServidor" placeholder="Buscar servidor..." oninput="filtrarServidores()">
       <button class="btn btn-primary" onclick="abrirModal()">+ Adicionar</button>
       <button class="btn btn-ghost" onclick="verificarTodos()">Verificar Todos</button>
       <button class="btn btn-warning" onclick="atualizarTodos()">Atualizar Todos</button>

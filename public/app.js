@@ -1,12 +1,14 @@
 // ── Estado local ──
 const serverStatus = {}; // { id: { status, versao, log[], transferProgress } }
+let arquivoPendente = null; // File selecionado aguardando confirmacao
+let versaoAtiva = null; // Versao ativa atual
 
 // ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
-  carregarServidores();
-  verificarExe();
+document.addEventListener('DOMContentLoaded', async () => {
+  await verificarExe(); // Carregar versaoAtiva primeiro
+  carregarServidores(); // Depois renderizar cards com badges
   carregarHistorico();
   setupDropZone();
 });
@@ -23,12 +25,43 @@ function setupDropZone() {
   dz.addEventListener('drop', e => {
     e.preventDefault();
     dz.classList.remove('dragover');
-    if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files.length) selecionarArquivo(e.dataTransfer.files[0]);
   });
-  fi.addEventListener('change', () => { if (fi.files.length) uploadFile(fi.files[0]); });
+  fi.addEventListener('change', () => { if (fi.files.length) selecionarArquivo(fi.files[0]); });
 }
 
-function uploadFile(file) {
+function selecionarArquivo(file) {
+  arquivoPendente = file;
+  const confirm = document.getElementById('uploadConfirm');
+  const fileName = document.getElementById('uploadFileName');
+  const dropZone = document.getElementById('dropZone');
+  fileName.textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+  confirm.style.display = 'block';
+  dropZone.style.display = 'none';
+}
+
+function cancelarUpload() {
+  arquivoPendente = null;
+  document.getElementById('uploadConfirm').style.display = 'none';
+  document.getElementById('dropZone').style.display = '';
+  document.getElementById('inputVersao').value = '';
+  document.getElementById('fileInput').value = '';
+}
+
+function confirmarUpload() {
+  const versao = document.getElementById('inputVersao').value.trim();
+  if (!versao) {
+    alert('Informe a versao antes de enviar');
+    return;
+  }
+  if (!arquivoPendente) return;
+  uploadFile(arquivoPendente, versao);
+  document.getElementById('uploadConfirm').style.display = 'none';
+  document.getElementById('dropZone').style.display = '';
+  document.getElementById('inputVersao').value = '';
+}
+
+function uploadFile(file, versao) {
   const form = new FormData();
   form.append('arquivo', file);
 
@@ -48,7 +81,17 @@ function uploadFile(file) {
     if (xhr.status === 200) {
       pf.style.width = '100%';
       setTimeout(() => { pb.style.display = 'none'; }, 1000);
-      verificarExe();
+      arquivoPendente = null;
+      // Salvar versao no backend
+      if (versao) {
+        fetch('/api/versao', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ versao }),
+        }).then(() => verificarExe());
+      } else {
+        verificarExe();
+      }
     } else {
       pb.style.display = 'none';
       try {
@@ -69,27 +112,98 @@ async function verificarExe() {
   const data = await res.json();
   const badge = document.getElementById('exeBadge');
   const info = document.getElementById('uploadInfo');
+  const selector = document.getElementById('versaoSelector');
+  const select = document.getElementById('selectVersao');
+
+  versaoAtiva = data.versao || null;
 
   if (data.disponivel) {
+    const versaoLabel = data.versao ? ` v${data.versao}` : '';
     badge.className = 'badge badge-ok';
-    badge.textContent = `${data.arquivo} (${data.tamanho_mb} MB)`;
-    info.style.display = 'block';
-    const dt = new Date(data.modificado_em).toLocaleString('pt-BR');
-    info.innerHTML = `<strong>${data.arquivo}</strong> &mdash; ${data.tamanho_mb} MB &mdash; ${dt}`;
+    if (data.arquivo) {
+      badge.textContent = `${data.arquivo}${versaoLabel} (${data.tamanho_mb} MB)`;
+      info.style.display = 'block';
+      const dt = new Date(data.modificado_em).toLocaleString('pt-BR');
+      info.innerHTML = `<strong>${data.arquivo}</strong>${versaoLabel} &mdash; ${data.tamanho_mb} MB &mdash; ${dt}`;
+    } else {
+      badge.textContent = `v${data.versao} (cache)`;
+      info.style.display = 'none';
+    }
   } else {
     badge.className = 'badge badge-no';
     badge.textContent = 'Nenhum .exe';
     info.style.display = 'none';
+  }
+
+  // Popular select de versoes
+  const versoes = data.versoes || [];
+  if (versoes.length > 0) {
+    select.innerHTML = versoes.map(v =>
+      `<option value="${v}" ${v === data.versao ? 'selected' : ''}>${v}${v === data.versao ? ' (ativa)' : ''}</option>`
+    ).join('');
+    selector.style.display = 'flex';
+  } else {
+    selector.style.display = 'none';
+  }
+}
+
+function compararVersoes(a, b) {
+  if (!a || !b) return 0;
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const na = pa[i] || 0;
+    const nb = pb[i] || 0;
+    if (na < nb) return -1;
+    if (na > nb) return 1;
+  }
+  return 0;
+}
+
+async function selecionarVersaoExistente() {
+  const select = document.getElementById('selectVersao');
+  const versao = select.value;
+  if (!versao) return;
+
+  try {
+    const res = await fetch('/api/versao/selecionar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ versao }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      verificarExe();
+      carregarServidores();
+    } else {
+      alert('Erro ao selecionar versao: ' + (data.erro || 'Erro desconhecido'));
+    }
+  } catch (err) {
+    alert('Erro de conexao: ' + err.message);
   }
 }
 
 // ══════════════════════════════════════════
 // SERVIDORES
 // ══════════════════════════════════════════
+let todosServidores = []; // Lista completa para filtro
+
 async function carregarServidores() {
   const res = await fetch('/api/servidores');
-  const servidores = await res.json();
-  renderServidores(servidores);
+  todosServidores = await res.json();
+  filtrarServidores();
+}
+
+function filtrarServidores() {
+  const busca = (document.getElementById('buscarServidor')?.value || '').toLowerCase().trim();
+  if (!busca) {
+    renderServidores(todosServidores);
+  } else {
+    renderServidores(todosServidores.filter(s =>
+      s.nome.toLowerCase().includes(busca) || s.ip.toLowerCase().includes(busca)
+    ));
+  }
 }
 
 function formatMB(bytes) {
@@ -106,14 +220,47 @@ function renderServidores(lista) {
     const st = serverStatus[s.id] || {};
     const statusClass = st.status === 'rodando' ? 'status-running' : st.status === 'parado' ? 'status-stopped' : 'status-unknown';
     const statusText = st.status || 'Nao verificado';
-    const versao = st.versao || '—';
+    const versao = st.versao || s.versaoDeployada || '—';
     const deploying = st.deploying || false;
+    const aguardando = st.aguardando || false;
+
+    // Badge de atualizado/desatualizado
+    const versaoServidor = st.versao || s.versaoDeployada;
+    let versaoBadge = '';
+    if (versaoAtiva && versaoServidor) {
+      const cmp = compararVersoes(versaoServidor, versaoAtiva);
+      if (cmp >= 0) {
+        versaoBadge = '<span class="badge badge-atualizado">atualizado</span>';
+      } else {
+        versaoBadge = '<span class="badge badge-desatualizado">desatualizado</span>';
+      }
+    }
 
     // Log
-    const logHtml = (st.log || []).map(l =>
+    const logEntries = st.log || [];
+    const logHtml = logEntries.map(l =>
       `<div class="log-${l.tipo}">[${l.ts}] ${l.msg}</div>`
     ).join('');
-    const logVisible = st.log && st.log.length > 0 ? 'visible' : '';
+    const hasLog = logEntries.length > 0;
+    const collapsed = st.logCollapsed === true;
+
+    // Resumo colapsado
+    let logSectionHtml = '';
+    if (hasLog && collapsed) {
+      const lastResult = st.deploySuccess !== undefined
+        ? (st.deploySuccess ? 'Sucesso' : 'Erro')
+        : 'Concluido';
+      const resultClass = st.deploySuccess === true ? 'log-sucesso' : st.deploySuccess === false ? 'log-erro' : 'log-info';
+      logSectionHtml = `
+        <div class="log-summary">
+          <span class="${resultClass}">Deploy concluido &mdash; ${lastResult}</span>
+          <a class="log-toggle" onclick="toggleLog('${s.id}')">Ver log</a>
+        </div>`;
+    } else if (hasLog) {
+      logSectionHtml = `
+        ${!deploying ? `<div class="log-summary"><a class="log-toggle" onclick="toggleLog('${s.id}')">Ocultar log</a></div>` : ''}
+        <div class="deploy-log visible" id="log-${s.id}">${logHtml}</div>`;
+    }
 
     // Progress de transferencia
     const tp = st.transferProgress;
@@ -143,23 +290,24 @@ function renderServidores(lista) {
           <span>${esc(s.ip)}:${s.porta}</span>
           <span><span class="status-dot ${statusClass}"></span> ${statusText}</span>
           <span>v${versao}</span>
+          ${versaoBadge}
         </div>
         <div class="server-actions">
-          <button class="btn btn-ghost btn-sm" onclick="testarServidor('${s.id}')" ${deploying ? 'disabled' : ''}>Testar</button>
+          <button class="btn btn-ghost btn-sm" onclick="testarServidor('${s.id}')" ${deploying || aguardando ? 'disabled' : ''}>Testar</button>
           ${st.status === 'parado'
-            ? `<button class="btn btn-success btn-sm" onclick="iniciarServico('${s.id}')" ${deploying ? 'disabled' : ''}>Iniciar Servico</button>`
+            ? `<button class="btn btn-success btn-sm" onclick="iniciarServico('${s.id}')" ${deploying || aguardando ? 'disabled' : ''}>Iniciar Servico</button>`
             : ''}
           ${st.status === 'rodando'
-            ? `<button class="btn btn-danger btn-sm" onclick="pararServico('${s.id}')" ${deploying ? 'disabled' : ''}>Parar Servico</button>`
+            ? `<button class="btn btn-danger btn-sm" onclick="pararServico('${s.id}')" ${deploying || aguardando ? 'disabled' : ''}>Parar Servico</button>`
             : ''}
-          <button class="btn btn-success btn-sm" onclick="deployServidor('${s.id}')" ${deploying ? 'disabled' : ''}>
-            ${deploying ? '<span class="spinner"></span> Deploying...' : 'Deploy'}
+          <button class="btn btn-success btn-sm" onclick="deployServidor('${s.id}')" ${deploying || aguardando ? 'disabled' : ''}>
+            ${deploying ? '<span class="spinner"></span> Deploying...' : aguardando ? 'Aguardando...' : 'Deploy'}
           </button>
-          <button class="btn btn-ghost btn-sm" onclick="editarServidor('${s.id}')" ${deploying ? 'disabled' : ''}>Editar</button>
-          <button class="btn btn-danger btn-sm" onclick="removerServidor('${s.id}')" ${deploying ? 'disabled' : ''}>Remover</button>
+          <button class="btn btn-ghost btn-sm" onclick="editarServidor('${s.id}')" ${deploying || aguardando ? 'disabled' : ''}>Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="removerServidor('${s.id}')" ${deploying || aguardando ? 'disabled' : ''}>Remover</button>
         </div>
         ${progressHtml}
-        <div class="deploy-log ${logVisible}" id="log-${s.id}">${logHtml}</div>
+        ${logSectionHtml}
       </div>
     `;
   }).join('');
@@ -258,19 +406,52 @@ async function pararServico(id) {
   carregarServidores();
 }
 
-async function testarServidor(id) {
-  serverStatus[id] = { ...serverStatus[id], status: 'verificando...' };
+function testarServidor(id) {
+  serverStatus[id] = { ...serverStatus[id], status: 'verificando...', deploying: true, log: [], logCollapsed: false };
   carregarServidores();
 
-  const res = await fetch(`/api/testar/${id}`, { method: 'POST' });
-  const data = await res.json();
+  const evtSource = new EventSource(`/api/testar/${id}/stream`);
 
-  if (data.conectou) {
-    serverStatus[id] = { status: data.servico_status, versao: data.versao_atual };
-  } else {
-    serverStatus[id] = { status: 'erro: ' + (data.erro || '?'), versao: null };
-  }
-  carregarServidores();
+  evtSource.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+
+      if (data.evento === 'log') {
+        if (!serverStatus[id].log) serverStatus[id].log = [];
+        serverStatus[id].log.push({ ts: data.ts, msg: data.msg, tipo: data.tipo });
+        atualizarCardDeploy(id);
+      }
+
+      else if (data.evento === 'resultado') {
+        evtSource.close();
+        if (data.conectou) {
+          serverStatus[id] = {
+            ...serverStatus[id],
+            status: data.servico_status,
+            versao: data.versao_atual,
+            deploying: false,
+            logCollapsed: true,
+          };
+        } else {
+          serverStatus[id] = {
+            ...serverStatus[id],
+            status: 'erro',
+            deploying: false,
+            logCollapsed: false,
+          };
+        }
+        carregarServidores();
+      }
+    } catch (_) {}
+  };
+
+  evtSource.onerror = () => {
+    evtSource.close();
+    serverStatus[id].deploying = false;
+    if (!serverStatus[id].log) serverStatus[id].log = [];
+    serverStatus[id].log.push({ ts: now(), msg: 'Conexao perdida', tipo: 'erro' });
+    carregarServidores();
+  };
 }
 
 function deployServidor(id) {
@@ -363,12 +544,18 @@ function atualizarTodos() {
 
   const fetchServidores = fetch('/api/servidores').then(r => r.json());
   fetchServidores.then(servidores => {
+    // Marcar todos como pendentes (aguardando vez), exceto ja atualizados
     servidores.forEach(s => {
+      const versaoServidor = serverStatus[s.id]?.versao || s.versaoDeployada;
+      const jaAtualizado = versaoAtiva && versaoServidor && versaoServidor === versaoAtiva;
       serverStatus[s.id] = {
         ...serverStatus[s.id],
-        deploying: true,
+        deploying: false,
         log: [],
         transferProgress: null,
+        logCollapsed: false,
+        deploySuccess: undefined,
+        aguardando: !jaAtualizado,
       };
     });
     carregarServidores();
@@ -380,7 +567,32 @@ function atualizarTodos() {
         const data = JSON.parse(e.data);
         const sid = data.servidorId;
 
-        if (data.evento === 'log' && sid) {
+        if (data.evento === 'deploy_pulado' && sid) {
+          serverStatus[sid] = {
+            ...serverStatus[sid],
+            deploying: false,
+            aguardando: false,
+            log: [{ ts: now(), msg: `Ja atualizado (v${data.versao})`, tipo: 'sucesso' }],
+            logCollapsed: true,
+            deploySuccess: true,
+          };
+          carregarServidores();
+        }
+
+        else if (data.evento === 'deploy_iniciando' && sid) {
+          serverStatus[sid] = {
+            ...serverStatus[sid],
+            deploying: true,
+            aguardando: false,
+            log: [],
+            transferProgress: null,
+            logCollapsed: false,
+            deploySuccess: undefined,
+          };
+          carregarServidores();
+        }
+
+        else if (data.evento === 'log' && sid) {
           if (!serverStatus[sid]) serverStatus[sid] = { deploying: true, log: [] };
           if (!serverStatus[sid].log) serverStatus[sid].log = [];
           serverStatus[sid].log.push({ ts: data.ts, msg: data.msg, tipo: data.tipo });
@@ -412,6 +624,9 @@ function atualizarTodos() {
             log: data.log || serverStatus[sid]?.log,
             transferProgress: null,
             deploying: false,
+            aguardando: false,
+            logCollapsed: true,
+            deploySuccess: data.sucesso,
           };
           carregarServidores();
         }
@@ -427,8 +642,9 @@ function atualizarTodos() {
     evtSource.onerror = () => {
       evtSource.close();
       servidores.forEach(s => {
-        if (serverStatus[s.id]?.deploying) {
+        if (serverStatus[s.id]?.deploying || serverStatus[s.id]?.aguardando) {
           serverStatus[s.id].deploying = false;
+          serverStatus[s.id].aguardando = false;
           serverStatus[s.id].transferProgress = null;
         }
       });
@@ -587,6 +803,13 @@ async function carregarHistorico() {
       : '<span style="color:var(--red)">Erro</span>';
     return `<tr><td>${dt}</td><td>${esc(l.servidor)}</td><td>${statusHtml}</td><td>${l.duracao}</td></tr>`;
   }).join('');
+}
+
+// ── Toggle log colapsavel ──
+function toggleLog(id) {
+  if (!serverStatus[id]) return;
+  serverStatus[id].logCollapsed = !serverStatus[id].logCollapsed;
+  carregarServidores();
 }
 
 // ── Utils ──
