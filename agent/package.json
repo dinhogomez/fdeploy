@@ -1,0 +1,12 @@
+{
+  "name": "fdeploy-agent",
+  "version": "1.0.1",
+  "description": "FDeploy Agent - API auxiliar para servidores remotos",
+  "main": "agent.js",
+  "bin": "agent.js",
+  "pkg": {
+    "targets": ["node20-win-x64"],
+    "outputPath": "../dist",
+    "assets": ["package.json"]
+  }
+}

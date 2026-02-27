@@ -270,6 +270,23 @@
             </div>
           </div>
         </div>
+        <div class="agent-section" id="agentFields" style="display:none">
+          <div class="agent-section-title">FDeploy Agent</div>
+          <div class="agent-status-row">
+            <span id="agentStatusIndicator" class="agent-dot agent-offline"><span class="status-dot status-unknown"></span> Verificando...</span>
+          </div>
+          <div class="form-group-row">
+            <div class="form-group form-group-porta">
+              <label>Porta Agent</label>
+              <input type="number" id="fAgentPort" value="3501">
+            </div>
+          </div>
+          <div class="agent-btns">
+            <button type="button" class="btn btn-primary btn-sm" id="btnInstalarAgent" onclick="instalarAgent()">Instalar Agent</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnScriptAgent" onclick="gerarScriptAgent()">Script Manual</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnAtualizarAgent" onclick="atualizarAgent()" style="display:none">Atualizar Agent</button>
+          </div>
+        </div>
       </div>
       <!-- Coluna direita: grupo de replicacao -->
       <div class="modal-col-right" id="grupoReplicacaoFields" style="display:none">
@@ -295,6 +312,21 @@
     <div class="scripts-error-log" id="scriptsErrorLog" style="display:none"></div>
     <div class="scripts-modal-footer" id="scriptsModalFooter" style="display:none">
       <button class="btn btn-primary" onclick="fecharScriptsModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL DIAGNOSTICO AGENT ═══════════ -->
+<div class="modal-overlay" id="diagModalOverlay">
+  <div class="modal diag-modal">
+    <h2 id="diagModalTitle">Diagnostico</h2>
+    <div class="diag-subtitle" id="diagModalSubtitle"></div>
+    <div id="diagModalContent">
+      <div class="diag-loading"><span class="spinner"></span> Executando diagnostico...</div>
+    </div>
+    <div class="diag-actions" id="diagModalActions" style="display:none">
+      <button class="btn btn-ghost" onclick="fecharDiagModal()">Fechar</button>
+      <button class="btn btn-warning btn-sm" id="btnCorrigirTudo" onclick="corrigirTudoDiag()">Corrigir Tudo</button>
     </div>
   </div>
 </div>

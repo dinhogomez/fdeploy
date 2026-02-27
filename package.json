@@ -3,12 +3,22 @@
   "version": "1.0.0",
   "description": "Gerenciador de deploys via SSH para servidores Windows",
   "main": "server.js",
+  "bin": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "node build.js"
+  },
+  "pkg": {
+    "assets": ["public/**/*"],
+    "targets": ["node20-win-x64"],
+    "outputPath": "dist"
   },
   "dependencies": {
     "express": "^4.18.2",
     "multer": "^1.4.5-lts.1",
     "node-ssh": "^13.2.0"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.14.1"
   }
 }

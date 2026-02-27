@@ -1,6 +1,13 @@
 data/servidores.json
-uploads/*.exe
-uploads/*.bak
-.DS_Store
+data/versoes/
+data/versoes_geral/
+data/psql_client.zip
+data/deploy_log.json
+data/deploy_log_geral.json
+uploads/
+dist/
+debug_wmi.txt
+.claude/
 node_modules/
+.DS_Store
 *.log
