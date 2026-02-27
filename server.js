@@ -4,8 +4,12 @@ const path = require('path');
 const fs = require('fs');
 const zlib = require('zlib');
 const crypto = require('crypto');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 const { NodeSSH } = require('node-ssh');
+
+// Quando empacotado com pkg, __dirname aponta para o filesystem virtual.
+// Dados (data/, uploads/) ficam ao lado do .exe.
+const APP_ROOT = process.pkg ? path.dirname(process.execPath) : __dirname;
 
 const app = express();
 const PORT = 3500;
@@ -19,8 +23,8 @@ process.on('unhandledRejection', (err) => {
 });
 
 // ── Caminhos ──
-const DATA_DIR = path.join(__dirname, 'data');
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const DATA_DIR = path.join(APP_ROOT, 'data');
+const UPLOADS_DIR = path.join(APP_ROOT, 'uploads');
 const SERVIDORES_PATH = path.join(DATA_DIR, 'servidores.json');
 const DEPLOY_LOG_PATH = path.join(DATA_DIR, 'deploy_log.json');
 const VERSAO_PATH = path.join(DATA_DIR, 'versao.json');
@@ -510,7 +514,7 @@ async function instalarSSHRemoto(servidor, logMsg) {
   const senhaEscaped = senha.replace(/'/g, "''");
 
   // Debug: salvar cada script num arquivo para inspecao
-  const debugFile = path.join(__dirname, 'debug_wmi.txt');
+  const debugFile = path.join(APP_ROOT, 'debug_wmi.txt');
   let debugIdx = 0;
 
   // Helper: executa script PS com sessao CIM e retorna stdout
@@ -556,7 +560,38 @@ if ($svc) { Write-Host "SSHD:$($svc.State)" } else { Write-Host "SSHD:NAO_EXISTE
 `);
 
     if (check.includes('ERRO:')) {
-      logMsg(`Erro ao conectar via WMI: ${check.split('ERRO:').pop()}`, 'erro');
+      const erroWmi = check.split('ERRO:').pop().trim();
+      logMsg(`Erro ao conectar via WMI: ${erroWmi}`, 'erro');
+      if (/acesso negado|access.denied/i.test(erroWmi)) {
+        logMsg('--- DIAGNOSTICO ---', 'erro');
+        logMsg('O servidor bloqueou o acesso remoto via WMI (porta 135).', 'erro');
+        logMsg('Isso ocorre quando o UAC impede administradores locais de acessar remotamente.', 'erro');
+        logMsg('', 'erro');
+        logMsg('SOLUCAO: Acesse o servidor via TS/Radmin e execute como Administrador:', 'erro');
+        logMsg('  1. Liberar UAC para acesso remoto:', 'erro');
+        logMsg('     reg add HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System /v LocalAccountTokenFilterPolicy /t REG_DWORD /d 1 /f', 'erro');
+        logMsg('  2. Liberar firewall WMI (se necessario):', 'erro');
+        logMsg('     netsh advfirewall firewall set rule group="Windows Management Instrumentation (WMI)" new enable=yes', 'erro');
+        logMsg('  3. Verificar se o usuario esta no grupo Administradores:', 'erro');
+        logMsg('     net localgroup Administrators', 'erro');
+        logMsg('', 'erro');
+        logMsg('Apos executar os comandos, tente novamente.', 'erro');
+      } else if (/timeout|tempo/i.test(erroWmi)) {
+        logMsg('--- DIAGNOSTICO ---', 'erro');
+        logMsg('Servidor inacessivel — nenhuma porta respondeu (SSH 22 e WMI 135).', 'erro');
+        logMsg('', 'erro');
+        logMsg('SOLUCAO: Acesse o servidor via TS/Radmin e execute como Administrador:', 'erro');
+        logMsg('  1. Verificar se o servidor esta online e conectado na VPN (Radmin)', 'erro');
+        logMsg('  2. Liberar portas no firewall:', 'erro');
+        logMsg('     netsh advfirewall firewall add rule name="WMI-DCOM" dir=in action=allow protocol=TCP localport=135 profile=any', 'erro');
+        logMsg('     netsh advfirewall firewall set rule group="Windows Management Instrumentation (WMI)" new enable=yes', 'erro');
+        logMsg('  3. Liberar UAC para acesso remoto:', 'erro');
+        logMsg('     reg add HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System /v LocalAccountTokenFilterPolicy /t REG_DWORD /d 1 /f', 'erro');
+        logMsg('', 'erro');
+        logMsg('Apos executar os comandos, tente novamente.', 'erro');
+      } else {
+        logMsg('Verifique as configuracoes de rede, credenciais e permissoes do servidor.', 'erro');
+      }
       return false;
     }
 
@@ -564,40 +599,33 @@ if ($svc) { Write-Host "SSHD:$($svc.State)" } else { Write-Host "SSHD:NAO_EXISTE
     if (check.includes('SSHD:NAO_EXISTE')) {
       logMsg('OpenSSH Server NAO esta instalado', 'erro');
 
-      // Instalar via schtasks (tarefa agendada com /rl HIGHEST para elevacao real)
-      logMsg('Criando tarefa agendada para instalar OpenSSH com privilegios elevados...', 'progresso');
-      const installScript = `
-$taskName = 'FDeploy_InstallSSH'
-$dismCmd = 'dism.exe /Online /Add-Capability /CapabilityName:OpenSSH.Server~~~~0.0.1.0'
-schtasks /create /s '${ip}' /u '${usuario}' /p '${senha}' /tn $taskName /tr $dismCmd /sc once /st 00:00 /f /rl HIGHEST 2>&1
-$createResult = $LASTEXITCODE
-if ($createResult -ne 0) { Write-Host "TASK_ERRO_CREATE:$createResult"; return }
-Write-Host 'TASK_CRIADA'
-schtasks /run /s '${ip}' /u '${usuario}' /p '${senha}' /tn $taskName 2>&1
-$runResult = $LASTEXITCODE
-if ($runResult -ne 0) { Write-Host "TASK_ERRO_RUN:$runResult"; return }
-Write-Host 'TASK_EXECUTANDO'
-`;
-      const install = await executarPowerShell(installScript);
-      const installOut = (install.stdout || '').trim();
-      const installErr = (install.stderr || '').trim();
+      // Instalar via WMI: cria tarefa agendada como SYSTEM (requer privilegio elevado para DISM)
+      logMsg('Instalando OpenSSH via WMI (tarefa SYSTEM)...', 'progresso');
+      const dismCmd = 'dism.exe /Online /Add-Capability /CapabilityName:OpenSSH.Server~~~~0.0.1.0';
+      const installResult = await cimExec('dism-install', `
+$createCmd = 'schtasks /create /tn FDeploy_InstallSSH /tr "${dismCmd}" /sc once /st 00:00 /f /rl HIGHEST /ru SYSTEM'
+$r1 = Invoke-CimMethod -CimSession $session -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine="cmd.exe /c $createCmd"}
+Start-Sleep -Seconds 3
+$runCmd = 'schtasks /run /tn FDeploy_InstallSSH'
+$r2 = Invoke-CimMethod -CimSession $session -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine="cmd.exe /c $runCmd"}
+if ($r2.ReturnValue -eq 0) { Write-Host "DISM_INICIADO:PID=$($r2.ProcessId)" } else { Write-Host "DISM_ERRO:$($r2.ReturnValue)" }
+`);
 
       // Debug
       debugIdx++;
-      fs.appendFileSync(debugFile, `\n${'='.repeat(60)}\n[${debugIdx}] schtasks-install\n${'='.repeat(60)}\n${installScript}\n--- RESULTADO ---\nstdout: ${installOut}\nstderr: ${installErr}\ncode: ${install.code}\n\n`, 'utf8');
-      console.log(`[SCHTASKS ${ip}] stdout: ${installOut}`);
-      if (installErr) console.log(`[SCHTASKS ${ip}] stderr: ${installErr}`);
+      fs.appendFileSync(debugFile, `\n${'='.repeat(60)}\n[${debugIdx}] dism-install\n${'='.repeat(60)}\nResultado: ${installResult}\n\n`, 'utf8');
+      console.log(`[DISM ${ip}] ${installResult}`);
 
-      if (!installOut.includes('TASK_EXECUTANDO')) {
-        logMsg(`Falha ao criar/executar tarefa: ${installOut} ${installErr}`, 'erro');
+      if (!installResult.includes('DISM_INICIADO')) {
+        logMsg(`Falha ao iniciar DISM: ${installResult}`, 'erro');
         return false;
       }
-      logMsg('Tarefa de instalacao executando com privilegios elevados!', 'sucesso');
+      logMsg('DISM iniciado como SYSTEM! Aguardando instalacao...', 'sucesso');
 
       // Monitorar status do servico sshd ate ficar Running
       logMsg('Monitorando instalacao...', 'progresso');
       let sshdOk = false;
-      for (let i = 1; i <= 80; i++) {
+      for (let i = 1; i <= 20; i++) {
         await new Promise(r => setTimeout(r, 15000));
         const status = await cimExec(`poll-${i}`, `
 $svc = Get-CimInstance -CimSession $session -ClassName Win32_Service -Filter "Name='sshd'" -ErrorAction SilentlyContinue
@@ -634,7 +662,18 @@ Invoke-CimMethod -CimSession $session -ClassName Win32_Process -MethodName Creat
         }
       }
       if (!sshdOk) {
-        logMsg('Servico sshd nao iniciou apos 20 minutos', 'erro');
+        logMsg('--- DIAGNOSTICO ---', 'erro');
+        logMsg('A instalacao do OpenSSH via DISM nao foi concluida em 5 minutos.', 'erro');
+        logMsg('', 'erro');
+        logMsg('SOLUCAO: Acesse o servidor via TS/Radmin e execute como Administrador:', 'erro');
+        logMsg('  1. Instalar OpenSSH manualmente:', 'erro');
+        logMsg('     dism /Online /Add-Capability /CapabilityName:OpenSSH.Server~~~~0.0.1.0', 'erro');
+        logMsg('  2. Iniciar o servico:', 'erro');
+        logMsg('     sc config sshd start=auto && net start sshd', 'erro');
+        logMsg('  3. Liberar porta 22 no firewall:', 'erro');
+        logMsg('     netsh advfirewall firewall add rule name=sshd dir=in action=allow protocol=TCP localport=22', 'erro');
+        logMsg('', 'erro');
+        logMsg('Apos executar os comandos, tente novamente.', 'erro');
         return false;
       }
 
@@ -689,7 +728,18 @@ Invoke-CimMethod -CimSession $session -ClassName Win32_Process -MethodName Creat
       }
     }
 
-    logMsg('SSH nao ficou acessivel. Verifique firewall e rede', 'erro');
+    logMsg('--- DIAGNOSTICO ---', 'erro');
+    logMsg('O OpenSSH foi instalado mas a conexao SSH nao ficou acessivel.', 'erro');
+    logMsg('', 'erro');
+    logMsg('SOLUCAO: Acesse o servidor via TS/Radmin e execute como Administrador:', 'erro');
+    logMsg('  1. Verificar se o sshd esta rodando:', 'erro');
+    logMsg('     sc query sshd', 'erro');
+    logMsg('  2. Iniciar se estiver parado:', 'erro');
+    logMsg('     net start sshd', 'erro');
+    logMsg('  3. Liberar porta 22 no firewall:', 'erro');
+    logMsg('     netsh advfirewall firewall add rule name=sshd dir=in action=allow protocol=TCP localport=22', 'erro');
+    logMsg('', 'erro');
+    logMsg('Apos executar os comandos, tente novamente.', 'erro');
     return false;
   } catch (err) {
     logMsg(`Erro na comunicacao WMI: ${err.message}`, 'erro');
@@ -943,7 +993,6 @@ async function executarDeployGeral(servidor, emit, operador) {
         ssh = await conectarSSH(servidor);
         firewallAberta = true;
       } else {
-        logMsg('Verifique se o login e senha do Windows estao corretos nas configuracoes do servidor', 'erro');
         throw sshErr;
       }
     }
@@ -1032,7 +1081,18 @@ async function executarDeployGeral(servidor, emit, operador) {
       salvarServidores(servidores);
     }
   } catch (err) {
-    logMsg(`ERRO: ${err.message}`, 'erro');
+    // Evitar mensagem duplicada para erros de conexao ja detalhados
+    if (/authentication/i.test(err.message)) {
+      logMsg('--- DIAGNOSTICO ---', 'erro');
+      logMsg('Credenciais SSH rejeitadas pelo servidor.', 'erro');
+      logMsg('', 'erro');
+      logMsg('SOLUCAO:', 'erro');
+      logMsg('  1. Verifique o login e senha nas configuracoes do servidor no FDeploy', 'erro');
+      logMsg('  2. Teste o acesso manualmente via TS/Radmin com as mesmas credenciais', 'erro');
+      logMsg('  3. Se a senha foi alterada, atualize no cadastro do servidor', 'erro');
+    } else if (!/ETIMEDOUT|ECONNREFUSED|EHOSTUNREACH/i.test(err.message)) {
+      logMsg(`ERRO: ${err.message}`, 'erro');
+    }
   } finally {
     if (firewallAberta && ssh) await removerFirewallSSH(ssh, logMsg);
     if (ssh) ssh.dispose();
@@ -1575,7 +1635,6 @@ async function executarDeploy(servidor, emit) {
         ssh = await conectarSSH(servidor);
         firewallAberta = true;
       } else {
-        logMsg('Verifique se o login e senha do Windows estao corretos nas configuracoes do servidor', 'erro');
         throw sshErr;
       }
     }
@@ -1705,7 +1764,18 @@ async function executarDeploy(servidor, emit) {
       logMsg('ROLLBACK executado — versao anterior restaurada', 'erro');
     }
   } catch (err) {
-    logMsg(`ERRO: ${err.message}`, 'erro');
+    // Evitar mensagem duplicada para erros de conexao ja detalhados
+    if (/authentication/i.test(err.message)) {
+      logMsg('--- DIAGNOSTICO ---', 'erro');
+      logMsg('Credenciais SSH rejeitadas pelo servidor.', 'erro');
+      logMsg('', 'erro');
+      logMsg('SOLUCAO:', 'erro');
+      logMsg('  1. Verifique o login e senha nas configuracoes do servidor no FDeploy', 'erro');
+      logMsg('  2. Teste o acesso manualmente via TS/Radmin com as mesmas credenciais', 'erro');
+      logMsg('  3. Se a senha foi alterada, atualize no cadastro do servidor', 'erro');
+    } else if (!/ETIMEDOUT|ECONNREFUSED|EHOSTUNREACH/i.test(err.message)) {
+      logMsg(`ERRO: ${err.message}`, 'erro');
+    }
   } finally {
     if (firewallAberta && ssh) await removerFirewallSSH(ssh, logMsg);
     if (ssh) ssh.dispose();
@@ -1754,6 +1824,13 @@ app.get('/api/deploy/todos/stream', (req, res) => {
     'Connection': 'keep-alive',
   });
 
+  const versaoAtiva = lerVersao();
+  if (!versaoAtiva) {
+    res.write(`data: ${JSON.stringify({ evento: 'erro', msg: 'Nenhuma versao selecionada. Crie ou selecione uma versao antes de atualizar.' })}\n\n`);
+    res.end();
+    return;
+  }
+
   const servidores = lerServidores();
   if (servidores.length === 0) {
     res.write(`data: ${JSON.stringify({ evento: 'concluido_todos', resultados: [] })}\n\n`);
@@ -1801,6 +1878,13 @@ app.get('/api/deploy/:id/stream', (req, res) => {
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
   });
+
+  const versaoAtiva = lerVersao();
+  if (!versaoAtiva) {
+    res.write(`data: ${JSON.stringify({ evento: 'erro', msg: 'Nenhuma versao selecionada. Crie ou selecione uma versao antes de atualizar.' })}\n\n`);
+    res.end();
+    return;
+  }
 
   const servidores = lerServidores();
   const servidor = servidores.find(s => s.id === req.params.id);
@@ -2022,6 +2106,13 @@ app.get('/api/geral/deploy/todos/stream', (req, res) => {
     'Connection': 'keep-alive',
   });
 
+  const versaoAtiva = lerVersaoGeral();
+  if (!versaoAtiva) {
+    res.write(`data: ${JSON.stringify({ evento: 'erro', msg: 'Nenhuma versao selecionada. Crie ou selecione uma versao antes de atualizar.' })}\n\n`);
+    res.end();
+    return;
+  }
+
   const servidores = lerServidores();
   if (servidores.length === 0) {
     res.write(`data: ${JSON.stringify({ evento: 'concluido_todos', resultados: [] })}\n\n`);
@@ -2123,6 +2214,13 @@ app.get('/api/geral/deploy/:id/stream', (req, res) => {
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
   });
+
+  const versaoAtiva = lerVersaoGeral();
+  if (!versaoAtiva) {
+    res.write(`data: ${JSON.stringify({ evento: 'erro', msg: 'Nenhuma versao selecionada. Crie ou selecione uma versao antes de atualizar.' })}\n\n`);
+    res.end();
+    return;
+  }
 
   const servidores = lerServidores();
   const servidor = servidores.find(s => s.id === req.params.id);
@@ -2306,4 +2404,18 @@ app.get('/api/geral/scripts/versao/:id', async (req, res) => {
 // ── Start ──
 app.listen(PORT, () => {
   console.log(`FDeploy rodando em http://localhost:${PORT}`);
+  if (process.pkg) {
+    const url = `http://localhost:${PORT}`;
+    const chromePaths = [
+      path.join(process.env.PROGRAMFILES || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(process.env['PROGRAMFILES(X86)'] || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(process.env.LOCALAPPDATA || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    ];
+    const chrome = chromePaths.find(p => fs.existsSync(p));
+    if (chrome) {
+      exec(`"${chrome}" "${url}"`);
+    } else {
+      exec(`start ${url}`);
+    }
+  }
 });

@@ -5,10 +5,12 @@ let nomeOperador = '';
 const serverStatus = {}; // { id: { status, versao, log[], transferProgress } }
 let arquivoPendente = null; // File selecionado aguardando confirmacao
 let versaoAtiva = null; // Versao ativa atual (Fvendas)
+let deployTodosEmAndamento = false; // Protecao contra duplo clique
 
 // ── Estado Servidor Geral ──
 const geralStatus = {}; // { id: { etapa, log[], transferProgress, deploying, aguardando, logCollapsed, deploySuccess } }
 let versaoGeralAtiva = null;
+let deployGeralTodosEmAndamento = false; // Protecao contra duplo clique
 let todosServidoresGeral = [];
 
 // ── Estado Scripts SQL ──
@@ -517,6 +519,12 @@ function testarServidor(id) {
 }
 
 function deployServidor(id) {
+  if (!versaoAtiva) {
+    alert('Nenhuma versao selecionada.\n\nCrie ou selecione uma versao antes de atualizar.');
+    return;
+  }
+  // Proteger contra cliques multiplos
+  if (serverStatus[id]?.deploying || serverStatus[id]?.aguardando) return;
   if (!confirm('Iniciar deploy neste servidor?')) return;
 
   serverStatus[id] = {
@@ -601,7 +609,13 @@ async function verificarTodos() {
 }
 
 function atualizarTodos() {
+  if (!versaoAtiva) {
+    alert('Nenhuma versao selecionada.\n\nCrie ou selecione uma versao antes de atualizar.');
+    return;
+  }
+  if (deployTodosEmAndamento) return;
   if (!confirm('Iniciar deploy em TODOS os servidores?')) return;
+  deployTodosEmAndamento = true;
 
   const fetchServidores = fetch('/api/servidores').then(r => r.json());
   fetchServidores.then(servidores => {
@@ -693,6 +707,7 @@ function atualizarTodos() {
 
         else if (data.evento === 'concluido_todos') {
           evtSource.close();
+          deployTodosEmAndamento = false;
           carregarServidores();
           carregarHistorico();
         }
@@ -701,6 +716,7 @@ function atualizarTodos() {
 
     evtSource.onerror = () => {
       evtSource.close();
+      deployTodosEmAndamento = false;
       servidores.forEach(s => {
         if (serverStatus[s.id]?.deploying || serverStatus[s.id]?.aguardando) {
           serverStatus[s.id].deploying = false;
@@ -1174,8 +1190,8 @@ function renderCardServidorGeral(s, emGrupo) {
         ${ultimaAtt ? `<span class="text-muted">${ultimaAtt}</span>` : ''}
       </div>
       <div class="server-actions">
-        <button class="btn btn-success btn-sm" onclick="deployServidorGeral('${s.id}')" ${deploying || aguardando ? 'disabled' : ''}>
-          ${deploying ? '<span class="spinner"></span> Atualizando...' : aguardando ? 'Aguardando...' : 'Atualizar'}
+        <button class="btn btn-success btn-sm" onclick="deployServidorGeral('${s.id}')" ${deploying || aguardando || st.verificando ? 'disabled' : ''}>
+          ${deploying ? '<span class="spinner"></span> Atualizando...' : st.verificando ? '<span class="spinner"></span> Verificando...' : aguardando ? 'Aguardando...' : 'Atualizar'}
         </button>
         ${s.temPostgreSQL ? `<button class="btn btn-ghost btn-sm" onclick="verificarVersaoBD('${s.id}')" ${deploying || aguardando ? 'disabled' : ''}>Verificar BD</button>` : ''}
         <button class="btn btn-ghost btn-sm" onclick="editarServidor('${s.id}')" ${deploying || aguardando ? 'disabled' : ''}>Editar</button>
@@ -1304,14 +1320,30 @@ function atualizarCardGeralDeploy(id) {
 // SERVIDOR GERAL — DEPLOY
 // ══════════════════════════════════════════
 async function deployServidorGeral(id) {
+  if (!versaoGeralAtiva) {
+    alert('Nenhuma versao selecionada.\n\nCrie ou selecione uma versao antes de atualizar.');
+    return;
+  }
+
   const srv = todosServidoresGeral.find(s => s.id === id);
   if (!srv) return;
+
+  // Proteger contra cliques multiplos
+  if (geralStatus[id]?.verificando || geralStatus[id]?.deploying) return;
 
   // Verificar replicacao se tem PostgreSQL
   if (srv.temPostgreSQL) {
     try {
+      // Feedback visual imediato — mostrar "Verificando..."
+      geralStatus[id] = { ...geralStatus[id], verificando: true };
+      renderServidoresGeral(todosServidoresGeral);
+
       const res = await fetch(`/api/geral/verificar-replicacao/${id}`);
       const data = await res.json();
+
+      geralStatus[id].verificando = false;
+      renderServidoresGeral(todosServidoresGeral);
+
       if (data.temReplicacao) {
         // Tem replicacao — verificar se tem irmaos cadastrados
         const irmaos = srv.grupoReplicacao
@@ -1337,6 +1369,8 @@ async function deployServidorGeral(id) {
       }
     } catch (_) {
       // Erro na verificacao — prosseguir normalmente
+      geralStatus[id] = { ...geralStatus[id], verificando: false };
+      renderServidoresGeral(todosServidoresGeral);
     }
   }
 
@@ -1586,7 +1620,13 @@ async function iniciarDeployGrupo(primarioId, irmaoIds) {
 }
 
 function atualizarTodosGeral() {
+  if (!versaoGeralAtiva) {
+    alert('Nenhuma versao selecionada.\n\nCrie ou selecione uma versao antes de atualizar.');
+    return;
+  }
+  if (deployGeralTodosEmAndamento) return;
   if (!confirm('Iniciar atualizacao geral em TODOS os servidores?')) return;
+  deployGeralTodosEmAndamento = true;
 
   fetch('/api/servidores').then(r => r.json()).then(servidores => {
     servidores.forEach(s => {
@@ -1705,6 +1745,7 @@ function atualizarTodosGeral() {
 
         else if (data.evento === 'concluido_todos') {
           evtSource.close();
+          deployGeralTodosEmAndamento = false;
           carregarServidoresGeral();
           carregarHistoricoGeral();
         }
@@ -1713,6 +1754,7 @@ function atualizarTodosGeral() {
 
     evtSource.onerror = () => {
       evtSource.close();
+      deployGeralTodosEmAndamento = false;
       servidores.forEach(s => {
         if (geralStatus[s.id]?.deploying || geralStatus[s.id]?.aguardando) {
           geralStatus[s.id].deploying = false;
