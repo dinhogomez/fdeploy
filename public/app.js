@@ -1396,6 +1396,11 @@ async function deployServidorGeral(id) {
       geralStatus[id].verificando = false;
       renderServidoresGeral(todosServidoresGeral);
 
+      if (data.erro) {
+        alert('Erro ao verificar replicacao — deploy bloqueado.\n\n' + data.erro);
+        return;
+      }
+
       if (data.temReplicacao) {
         // Tem replicacao — verificar se tem irmaos cadastrados
         const irmaos = srv.grupoReplicacao
@@ -1419,10 +1424,11 @@ async function deployServidorGeral(id) {
         iniciarDeployGrupo(id, irmaos.map(i => i.id));
         return;
       }
-    } catch (_) {
-      // Erro na verificacao — prosseguir normalmente
+    } catch (err) {
       geralStatus[id] = { ...geralStatus[id], verificando: false };
       renderServidoresGeral(todosServidoresGeral);
+      alert('Erro ao verificar replicacao — deploy bloqueado.\n\n' + err.message);
+      return;
     }
   }
 

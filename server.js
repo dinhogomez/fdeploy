@@ -1081,6 +1081,8 @@ async function obterStatusServico(ssh) {
     const result = await ssh.execCommand(`sc query ${SERVICE_NAME}`);
     if (result.stdout.includes('RUNNING')) return 'rodando';
     if (result.stdout.includes('STOPPED')) return 'parado';
+    if (result.stdout.includes('START_PENDING')) return 'iniciando';
+    if (result.stdout.includes('STOP_PENDING')) return 'parando';
     return 'desconhecido';
   } catch (_) {
     return 'erro';
@@ -2311,14 +2313,85 @@ async function executarDeploy(servidor, emit) {
     await ssh.execCommand(`net start ${SERVICE_NAME}`);
     logMsg('Comando net start executado', 'sucesso');
 
-    // 11. Verificar serviço
-    logMsg('Verificando servico...', 'progresso');
-    await new Promise(r => setTimeout(r, 3000));
-    const status = await obterStatusServico(ssh);
+    // 11. Monitorar log.txt para verificar inicializacao
+    //     O Fvendas gera log.txt durante o boot — marcadores:
+    //     - "servidor online" + "banco conectado" = sucesso
+    //     - Servico parado (sc query STOPPED) = crash, rollback
+    //     - Timeout 2 min sem marcadores = considerar sucesso parcial (servico pode estar lento)
+    logMsg('Monitorando inicializacao do servico...', 'progresso');
+    let linhasVistas = 0;
+    let bootOk = false;
+    let servicoCaiu = false;
+    let crashLoop = false;
+    const MAX_TENTATIVAS = 40; // 40 x 3s = 2 minutos
 
-    if (status === 'rodando') {
+    for (let i = 0; i < MAX_TENTATIVAS; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+
+      // Ler log.txt
+      const logResult = await ssh.execCommand(`type "${REMOTE_DIR}\\log.txt" 2>nul`);
+      const logTexto = (logResult.stdout || '').trim();
+      if (logTexto) {
+        const linhas = logTexto.split('\n');
+        // Exibir apenas linhas novas
+        for (let j = linhasVistas; j < linhas.length; j++) {
+          const linha = linhas[j].trim();
+          if (!linha) continue;
+          const lower = linha.toLowerCase();
+          const tipo = (lower.includes('erro') || lower.includes('error') || lower.includes('falha'))
+            ? 'erro'
+            : (lower.includes('online') || lower.includes('conectado') || lower.includes('connected') || lower.includes('sucesso') || lower.includes('pronto'))
+              ? 'sucesso'
+              : 'info';
+          logMsg(linha, tipo);
+        }
+        linhasVistas = linhas.length;
+
+        const logLower = logTexto.toLowerCase();
+
+        // Detectar crash loop: "servidor iniciando" aparece mais de 1 vez = reiniciando repetidamente
+        // Detectar crash loop: "servidor online" aparece mais de 5 vezes = reiniciando repetidamente
+        const onlineCount = (logLower.match(/servidor online/g) || []).length;
+        if (onlineCount > 5) {
+          crashLoop = true;
+          logMsg(`Crash loop detectado — servico reiniciou ${onlineCount} vezes`, 'erro');
+          break;
+        }
+
+        // Verificar marcador de sucesso (primeira ocorrencia)
+        if (logLower.includes('servidor online') || logLower.includes('banco conectado')) {
+          bootOk = true;
+          break;
+        }
+      }
+
+      // Verificar se servico caiu (STOPPED = crash)
+      const scStatus = await obterStatusServico(ssh);
+      if (scStatus === 'parado') {
+        servicoCaiu = true;
+        break;
+      }
+
+      // Log de progresso a cada 15s
+      if (i > 0 && i % 5 === 0) {
+        logMsg(`Aguardando boot do Fvendas... (${i * 3}s)`, 'progresso');
+      }
+    }
+
+    if (crashLoop || servicoCaiu) {
+      // Servico em crash loop ou parou — rollback
+      if (!crashLoop) logMsg('Servico parou apos iniciar. Executando rollback...', 'erro');
+      logMsg('Executando rollback...', 'erro');
+      await ssh.execCommand(`net stop ${SERVICE_NAME} 2>nul`);
+      await ssh.execCommand(`taskkill /f /im Fvendas2.0.exe 2>nul`);
+      await new Promise(r => setTimeout(r, 2000));
+      await ssh.execCommand(`del "${REMOTE_EXE}" 2>nul`);
+      await ssh.execCommand(`rename "${REMOTE_BAK}" "Fvendas2.0.exe"`);
+      await ssh.execCommand(`net start ${SERVICE_NAME}`);
+      logMsg('ROLLBACK executado — versao anterior restaurada', 'erro');
+    } else if (bootOk) {
       const versao = await obterVersaoRemota(ssh);
-      logMsg(`Servico rodando! Versao: ${versao || '?'}`, 'sucesso');
+      logMsg(`Servico iniciado com sucesso! Versao: ${versao || '?'}`, 'sucesso');
       sucesso = true;
 
       // Rastrear versao deployada no servidor
@@ -2330,42 +2403,31 @@ async function executarDeploy(servidor, emit) {
           salvarServidores(servidores);
         }
       }
-
-      // 12. Aguardar log.txt ser gerado e ler conteudo
-      logMsg('Aguardando log de inicializacao...', 'progresso');
-      let logConteudo = null;
-      for (let i = 0; i < 10; i++) {
-        await new Promise(r => setTimeout(r, 2000));
-        const logResult = await ssh.execCommand(`type "${REMOTE_DIR}\\log.txt"`);
-        if (logResult.code === 0 && logResult.stdout && logResult.stdout.trim().length > 0) {
-          logConteudo = logResult.stdout.trim();
-          break;
-        }
-      }
-
-      if (logConteudo) {
-        logMsg('--- Log de inicializacao ---', 'info');
-        logConteudo.split('\n').forEach(linha => {
-          const linhaLimpa = linha.trim();
-          if (!linhaLimpa) return;
-          const tipo = linhaLimpa.toLowerCase().includes('erro') || linhaLimpa.toLowerCase().includes('error') || linhaLimpa.toLowerCase().includes('falha')
-            ? 'erro'
-            : linhaLimpa.toLowerCase().includes('conectou') || linhaLimpa.toLowerCase().includes('sucesso') || linhaLimpa.toLowerCase().includes('ok') || linhaLimpa.toLowerCase().includes('started') || linhaLimpa.toLowerCase().includes('connected')
-              ? 'sucesso'
-              : 'info';
-          logMsg(linhaLimpa, tipo);
-        });
-      } else {
-        logMsg('Log de inicializacao nao foi gerado em 20s', 'progresso');
-      }
     } else {
-      // Rollback
-      logMsg(`Servico NAO esta rodando (status: ${status}). Executando rollback...`, 'erro');
-      await ssh.execCommand(`net stop ${SERVICE_NAME} 2>nul`);
-      await ssh.execCommand(`del "${REMOTE_EXE}" 2>nul`);
-      await ssh.execCommand(`rename "${REMOTE_BAK}" "Fvendas2.0.exe"`);
-      await ssh.execCommand(`net start ${SERVICE_NAME}`);
-      logMsg('ROLLBACK executado — versao anterior restaurada', 'erro');
+      // Timeout — servico ainda em START_PENDING ou rodando sem log completo
+      // Verificar sc query como fallback
+      const scFinal = await obterStatusServico(ssh);
+      if (scFinal === 'rodando' || scFinal === 'iniciando') {
+        const versao = await obterVersaoRemota(ssh);
+        logMsg(`Servico ativo (boot demorado). Versao: ${versao || '?'}`, 'sucesso');
+        sucesso = true;
+
+        if (versaoAtual) {
+          const servidores = lerServidores();
+          const idx = servidores.findIndex(s => s.id === servidor.id);
+          if (idx !== -1) {
+            servidores[idx].versaoDeployada = versaoAtual;
+            salvarServidores(servidores);
+          }
+        }
+      } else {
+        logMsg(`Timeout — servico nao confirmou inicializacao (status: ${scFinal}). Executando rollback...`, 'erro');
+        await ssh.execCommand(`net stop ${SERVICE_NAME} 2>nul`);
+        await ssh.execCommand(`del "${REMOTE_EXE}" 2>nul`);
+        await ssh.execCommand(`rename "${REMOTE_BAK}" "Fvendas2.0.exe"`);
+        await ssh.execCommand(`net start ${SERVICE_NAME}`);
+        logMsg('ROLLBACK executado — versao anterior restaurada', 'erro');
+      }
     }
   } catch (err) {
     // Evitar mensagem duplicada para erros de conexao ja detalhados
@@ -3502,19 +3564,20 @@ app.get('/api/geral/verificar-replicacao/:id', async (req, res) => {
     const pgPort = servidor.pgPorta || 5432;
     const pgHost = servidor.pgHost || '127.0.0.1';
 
-    const cmd = `set "PGPASSWORD=${pgPass}"&& ${psqlBin} -U ${pgUser} -d ${pgDb} -p ${pgPort} -h ${pgHost} -t -A -c "SELECT replica FROM replicacao.servidor" 2>&1`;
+    const cmd = `set "PGPASSWORD=${pgPass}"&& ${psqlBin} -U ${pgUser} -d ${pgDb} -p ${pgPort} -h ${pgHost} -t -A -c "SELECT replica FROM sl.licencas LIMIT 1" 2>&1`;
     const result = await ssh.execCommand(cmd);
     ssh.dispose();
 
     const output = (result.stdout || '').trim();
-    // Se retornou algum valor (nao vazio, nao erro), tem replicacao
-    if (output && !output.includes('ERROR') && !output.includes('does not exist') && !output.includes('relation')) {
-      return res.json({ temReplicacao: true });
+    // Detectar erro na consulta
+    if (!output || output.includes('ERROR') || output.includes('does not exist') || output.includes('FATAL') || output.includes('connection refused')) {
+      return res.json({ erro: `Falha ao consultar sl.licencas: ${output || 'sem resposta'}` });
     }
-    return res.json({ temReplicacao: false });
+    // replica = 'S' tem replicacao, 'N' nao tem
+    return res.json({ temReplicacao: output.toUpperCase() === 'S' });
   } catch (err) {
     if (ssh) ssh.dispose();
-    return res.json({ temReplicacao: false });
+    return res.json({ erro: `Erro ao verificar replicacao: ${err.message}` });
   }
 });
 
