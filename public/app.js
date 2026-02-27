@@ -17,6 +17,10 @@ let todosServidoresGeral = [];
 let scriptsIndexInfo = null;
 let scriptsModalData = null; // { scripts: [], serverName: '', autoCloseTimer: null }
 
+// ── Estado Agent ──
+const agentStatus = {}; // { id: { online, version, hostname } }
+let diagModalServidorId = null;
+
 // ══════════════════════════════════════════
 // NAVEGACAO
 // ══════════════════════════════════════════
@@ -34,12 +38,18 @@ function navegarPara(tela) {
     carregarServidores();
     carregarHistorico();
     setupDropZone();
+    verificarTodosAgents().then(() => {
+      if (todosServidores.length) renderServidores(todosServidores);
+    });
   } else if (tela === 'geral') {
     document.getElementById('geralScreen').style.display = 'block';
     verificarGeralStatus();
     verificarScriptsStatus();
     carregarServidoresGeral();
     carregarHistoricoGeral();
+    verificarTodosAgents().then(() => {
+      if (todosServidoresGeral.length) renderServidoresGeral(todosServidoresGeral);
+    });
   }
 }
 
@@ -346,12 +356,14 @@ function renderServidores(lista) {
             <div class="server-name">${esc(s.nome)}</div>
             ${s.descricao ? `<div class="server-desc">${esc(s.descricao)}</div>` : ''}
           </div>
+          ${renderAgentPanel(s)}
         </div>
         <div class="server-meta">
           <span>${esc(s.ip)}:${s.porta}</span>
           <span><span class="status-dot ${statusClass}"></span> ${statusText}</span>
           <span>v${versao}</span>
           ${versaoBadge}
+          ${s.pendencias && s.pendencias.length ? `<span class="badge badge-pendencias" title="${s.pendencias.join(', ')}">⚠ ${s.pendencias.length} pendencia(s)</span>` : ''}
         </div>
         <div class="server-actions">
           <button class="btn btn-ghost btn-sm" onclick="testarServidor('${s.id}')" ${deploying || aguardando ? 'disabled' : ''}>Testar</button>
@@ -361,7 +373,7 @@ function renderServidores(lista) {
           ${st.status === 'rodando'
             ? `<button class="btn btn-danger btn-sm" onclick="pararServico('${s.id}')" ${deploying || aguardando ? 'disabled' : ''}>Parar Servico</button>`
             : ''}
-          <button class="btn btn-success btn-sm" onclick="deployServidor('${s.id}')" ${deploying || aguardando ? 'disabled' : ''}>
+          <button class="btn btn-success btn-sm" onclick="deployServidor('${s.id}')" ${deploying || aguardando || !agentProntoParaDeploy(s.id) ? 'disabled' : ''} ${!agentProntoParaDeploy(s.id) && !deploying && !aguardando ? `title="${esc(motivoBloqueioAgent(s.id))}"` : ''}>
             ${deploying ? '<span class="spinner"></span> Deploying...' : aguardando ? 'Aguardando...' : 'Deploy'}
           </button>
           <button class="btn btn-ghost btn-sm" onclick="editarServidor('${s.id}')" ${deploying || aguardando ? 'disabled' : ''}>Editar</button>
@@ -523,6 +535,10 @@ function deployServidor(id) {
     alert('Nenhuma versao selecionada.\n\nCrie ou selecione uma versao antes de atualizar.');
     return;
   }
+  if (!agentProntoParaDeploy(id)) {
+    alert('Deploy bloqueado: ' + motivoBloqueioAgent(id));
+    return;
+  }
   // Proteger contra cliques multiplos
   if (serverStatus[id]?.deploying || serverStatus[id]?.aguardando) return;
   if (!confirm('Iniciar deploy neste servidor?')) return;
@@ -641,7 +657,19 @@ function atualizarTodos() {
         const data = JSON.parse(e.data);
         const sid = data.servidorId;
 
-        if (data.evento === 'deploy_pulado' && sid) {
+        if (data.evento === 'deploy_bloqueado_agent' && sid) {
+          serverStatus[sid] = {
+            ...serverStatus[sid],
+            deploying: false,
+            aguardando: false,
+            log: [{ ts: now(), msg: `Deploy bloqueado: ${data.motivo}`, tipo: 'erro' }],
+            logCollapsed: false,
+            deploySuccess: false,
+          };
+          carregarServidores();
+        }
+
+        else if (data.evento === 'deploy_pulado' && sid) {
           serverStatus[sid] = {
             ...serverStatus[sid],
             deploying: false,
@@ -761,6 +789,14 @@ function abrirModal(dados) {
   document.getElementById('fPgUsuario').value = dados?.pgUsuario || 'frigo';
   document.getElementById('fPgSenha').value = '';
   togglePgFields();
+  // Campos Agent
+  document.getElementById('fAgentPort').value = dados?.agentPort || 3501;
+  if (dados && dados.id) {
+    document.getElementById('agentFields').style.display = 'block';
+    atualizarAgentModalStatus(dados.id);
+  } else {
+    document.getElementById('agentFields').style.display = 'none';
+  }
   // Grupo de Replicacao — so exibir ao editar
   const modalEl = document.querySelector('.modal-servidor');
   if (dados && dados.id) {
@@ -803,6 +839,7 @@ async function salvarServidor() {
     pgBanco: document.getElementById('fPgBanco').value,
     pgPorta: parseInt(document.getElementById('fPgPorta').value) || 5432,
     pgUsuario: document.getElementById('fPgUsuario').value || 'frigo',
+    agentPort: parseInt(document.getElementById('fAgentPort').value) || 3501,
   };
   const senha = document.getElementById('fSenha').value;
   if (senha) body.senha = senha;
@@ -824,16 +861,24 @@ async function salvarServidor() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+    fecharModal();
+    recarregarListaAtiva();
   } else {
-    await fetch('/api/servidores', {
+    const res = await fetch('/api/servidores', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+    const data = await res.json();
+    fecharModal();
+    recarregarListaAtiva();
+    if (data.ok && data.id) {
+      iniciarSetupWizard(data.id, body.nome, body.ip, body.porta);
+    }
   }
+}
 
-  fecharModal();
-  // Recarregar a lista correta dependendo da tela ativa
+function recarregarListaAtiva() {
   if (document.getElementById('fvendasScreen').style.display !== 'none') {
     carregarServidores();
   }
@@ -1180,6 +1225,7 @@ function renderCardServidorGeral(s, emGrupo) {
           <div class="server-name">${esc(s.nome)}${replicaBadge}</div>
           ${s.descricao ? `<div class="server-desc">${esc(s.descricao)}</div>` : ''}
         </div>
+        ${renderAgentPanel(s)}
       </div>
       <div class="server-meta">
         <span>${esc(s.ip)}:${s.porta}</span>
@@ -1188,9 +1234,10 @@ function renderCardServidorGeral(s, emGrupo) {
         ${s.temPostgreSQL && s.pgHost ? '<span class="badge badge-pg-remote">BD Remoto</span>' : s.temPostgreSQL ? '<span class="badge badge-pg">PG</span>' : ''}
         ${s.temPostgreSQL && s.versaoScriptBD ? `<span class="text-muted">BD v${s.versaoScriptBD}${s.pgHost ? ' (' + esc(s.pgHost) + ')' : ''}</span>` : s.temPostgreSQL && s.pgHost ? `<span class="text-muted">${esc(s.pgBanco)} (${esc(s.pgHost)})</span>` : ''}
         ${ultimaAtt ? `<span class="text-muted">${ultimaAtt}</span>` : ''}
+        ${s.pendencias && s.pendencias.length ? `<span class="badge badge-pendencias" title="${s.pendencias.join(', ')}">⚠ ${s.pendencias.length} pendencia(s)</span>` : ''}
       </div>
       <div class="server-actions">
-        <button class="btn btn-success btn-sm" onclick="deployServidorGeral('${s.id}')" ${deploying || aguardando || st.verificando ? 'disabled' : ''}>
+        <button class="btn btn-success btn-sm" onclick="deployServidorGeral('${s.id}')" ${deploying || aguardando || st.verificando || !agentProntoParaDeploy(s.id) ? 'disabled' : ''} ${!agentProntoParaDeploy(s.id) && !deploying && !aguardando && !st.verificando ? `title="${esc(motivoBloqueioAgent(s.id))}"` : ''}>
           ${deploying ? '<span class="spinner"></span> Atualizando...' : st.verificando ? '<span class="spinner"></span> Verificando...' : aguardando ? 'Aguardando...' : 'Atualizar'}
         </button>
         ${s.temPostgreSQL ? `<button class="btn btn-ghost btn-sm" onclick="verificarVersaoBD('${s.id}')" ${deploying || aguardando ? 'disabled' : ''}>Verificar BD</button>` : ''}
@@ -1330,6 +1377,11 @@ async function deployServidorGeral(id) {
 
   // Proteger contra cliques multiplos
   if (geralStatus[id]?.verificando || geralStatus[id]?.deploying) return;
+
+  if (!agentProntoParaDeploy(id)) {
+    alert('Deploy bloqueado: ' + motivoBloqueioAgent(id));
+    return;
+  }
 
   // Verificar replicacao se tem PostgreSQL
   if (srv.temPostgreSQL) {
@@ -1650,7 +1702,19 @@ function atualizarTodosGeral() {
         const data = JSON.parse(e.data);
         const sid = data.servidorId;
 
-        if (data.evento === 'deploy_pulado' && sid) {
+        if (data.evento === 'deploy_bloqueado_agent' && sid) {
+          geralStatus[sid] = {
+            deploying: false,
+            aguardando: false,
+            log: [{ ts: now(), msg: `Deploy bloqueado: ${data.motivo}`, tipo: 'erro' }],
+            etapa: null,
+            logCollapsed: false,
+            deploySuccess: false,
+          };
+          renderServidoresGeral(todosServidoresGeral);
+        }
+
+        else if (data.evento === 'deploy_pulado' && sid) {
           geralStatus[sid] = {
             deploying: false,
             aguardando: false,
@@ -2145,6 +2209,756 @@ async function removerDoGrupo(servidorIdAtual, servidorIdRemover) {
       if (srv) renderGrupoReplicacaoModal(srv);
     } else {
       alert('Erro: ' + (data.erro || 'Erro desconhecido'));
+    }
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+// ══════════════════════════════════════════
+// AGENT
+// ══════════════════════════════════════════
+
+function agentProntoParaDeploy(id) {
+  const st = agentStatus[id];
+  return st && st.temAgent && st.online && !st.desatualizado;
+}
+
+function motivoBloqueioAgent(id) {
+  const st = agentStatus[id];
+  if (!st || !st.temAgent) return 'Agent nao instalado';
+  if (!st.online) return 'Agent offline';
+  if (st.desatualizado) return 'Agent desatualizado (' + (st.version || st.versaoAgent || '?') + ' → ' + (st.versaoEsperada || '?') + ')';
+  return '';
+}
+
+function renderAgentDot(id) {
+  const st = agentStatus[id];
+  if (!st) return '';
+  if (st.online) {
+    return `<span class="agent-dot agent-online"><span class="status-dot status-running"></span> Agent v${esc(st.version || '?')}</span>`;
+  }
+  return '<span class="agent-dot agent-offline"><span class="status-dot status-stopped"></span> Agent</span>';
+}
+
+function renderAgentPanel(s) {
+  const st = agentStatus[s.id];
+  // Ainda carregando
+  if (!st) {
+    return `<div class="agent-panel agent-panel-loading">
+      <span class="spinner"></span>
+    </div>`;
+  }
+  // Agent atualizando
+  if (st._atualizando) {
+    return `<div class="agent-panel agent-panel-desatualizado">
+      <span class="spinner"></span>
+      <span class="agent-panel-label">Atualizando Agent...</span>
+    </div>`;
+  }
+  // Agent online mas desatualizado
+  if (st.online && st.desatualizado) {
+    return `<div class="agent-panel agent-panel-desatualizado">
+      <span class="status-dot status-warning"></span>
+      <span class="agent-panel-label">Agent v${esc(st.version || st.versaoAgent || '?')} — Desatualizado</span>
+      <button class="btn btn-primary btn-xs" onclick="atualizarAgentFromCard('${s.id}')">Atualizar</button>
+    </div>`;
+  }
+  // Agent online e atualizado
+  if (st.online) {
+    return `<div class="agent-panel agent-panel-online">
+      <span class="status-dot status-running"></span>
+      <span class="agent-panel-label">Agent v${esc(st.version || st.versaoAgent || '?')}</span>
+      <button class="btn btn-ghost btn-xs" onclick="diagnosticarServidor('${s.id}')">Diagnostico</button>
+    </div>`;
+  }
+  // Agent instalado mas offline
+  if (st.temAgent) {
+    return `<div class="agent-panel agent-panel-offline">
+      <span class="status-dot status-stopped"></span>
+      <span class="agent-panel-label">Agent offline</span>
+    </div>`;
+  }
+  // Sem agent
+  return `<div class="agent-panel agent-panel-none">
+    <span class="agent-panel-label">Sem Agent</span>
+    <button class="btn btn-primary btn-xs" onclick="instalarAgentFromCard('${s.id}')">Instalar</button>
+  </div>`;
+}
+
+function atualizarAgentFromCard(id) {
+  if (!confirm('Atualizar Agent neste servidor?')) return;
+
+  const allServs = todosServidores.length ? todosServidores : todosServidoresGeral;
+  const srv = allServs.find(s => s.id === id);
+  const nome = srv ? srv.nome : id;
+
+  // Marcar como atualizando no card
+  const st = agentStatus[id];
+  if (st) st._atualizando = true;
+  renderServidores(todosServidores || []);
+  renderServidoresGeral(todosServidoresGeral || []);
+
+  // Abrir diagModal com log de atualizacao
+  diagModalServidorId = id;
+  document.getElementById('diagModalTitle').textContent = `Atualizando Agent — ${esc(nome)}`;
+  document.getElementById('diagModalSubtitle').textContent = srv ? `${srv.ip}:${srv.porta}` : '';
+  document.getElementById('diagModalContent').innerHTML = '<div class="deploy-log visible" id="agentUpdateLog"></div>';
+  document.getElementById('diagModalActions').style.display = 'none';
+  document.getElementById('diagModalOverlay').classList.add('visible');
+
+  const logEl = document.getElementById('agentUpdateLog');
+
+  function appendLog(msg, tipo) {
+    const ts = new Date().toLocaleTimeString('pt-BR');
+    logEl.innerHTML += `<div class="log-${tipo || 'info'}">[${ts}] ${msg}</div>`;
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  const evtSource = new EventSource(`/api/agent/${id}/atualizar/stream`);
+
+  evtSource.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.evento === 'log') {
+        appendLog(data.msg, data.tipo);
+      } else if (data.evento === 'concluido') {
+        evtSource.close();
+        if (data.ok) {
+          appendLog(data.descricao, 'sucesso');
+        } else {
+          appendLog(data.descricao, 'erro');
+        }
+        // Atualizar status do agent
+        verificarAgentStatus(id).then(() => {
+          if (agentStatus[id]) agentStatus[id]._atualizando = false;
+          renderServidores(todosServidores || []);
+          renderServidoresGeral(todosServidoresGeral || []);
+        });
+        // Mostrar botao fechar
+        document.getElementById('diagModalActions').style.display = 'flex';
+        document.getElementById('diagModalActions').innerHTML = `<button class="btn btn-ghost" onclick="fecharDiagModal()">Fechar</button>`;
+      }
+    } catch (_) {}
+  };
+
+  evtSource.onerror = () => {
+    evtSource.close();
+    appendLog('Conexao perdida', 'erro');
+    if (agentStatus[id]) agentStatus[id]._atualizando = false;
+    renderServidores(todosServidores || []);
+    renderServidoresGeral(todosServidoresGeral || []);
+    document.getElementById('diagModalActions').style.display = 'flex';
+    document.getElementById('diagModalActions').innerHTML = `<button class="btn btn-ghost" onclick="fecharDiagModal()">Fechar</button>`;
+  };
+}
+
+async function verificarAgentStatus(id) {
+  try {
+    const res = await fetch(`/api/agent/${id}/status`);
+    const data = await res.json();
+    agentStatus[id] = data;
+    return data;
+  } catch (_) {
+    agentStatus[id] = { online: false };
+    return { online: false };
+  }
+}
+
+async function verificarTodosAgents() {
+  try {
+    const res = await fetch('/api/agent/status/todos');
+    const data = await res.json();
+    Object.keys(data).forEach(id => { agentStatus[id] = data[id]; });
+  } catch (_) {}
+}
+
+async function atualizarAgentModalStatus(id) {
+  const indicator = document.getElementById('agentStatusIndicator');
+  const btnAtualizar = document.getElementById('btnAtualizarAgent');
+  if (!indicator) return;
+
+  indicator.className = 'agent-dot agent-offline';
+  indicator.innerHTML = '<span class="status-dot status-unknown"></span> Verificando...';
+
+  const status = await verificarAgentStatus(id);
+  if (status.online) {
+    indicator.className = 'agent-dot agent-online';
+    indicator.innerHTML = `<span class="status-dot status-running"></span> Online (v${esc(status.version || '?')})`;
+    if (btnAtualizar) btnAtualizar.style.display = '';
+  } else {
+    indicator.className = 'agent-dot agent-offline';
+    indicator.innerHTML = '<span class="status-dot status-stopped"></span> Offline';
+    if (btnAtualizar) btnAtualizar.style.display = 'none';
+  }
+}
+
+async function diagnosticarServidor(id) {
+  diagModalServidorId = id;
+  // Encontrar nome do servidor
+  const allServs = todosServidores.length ? todosServidores : todosServidoresGeral;
+  const srv = allServs.find(s => s.id === id);
+  const nome = srv ? srv.nome : id;
+
+  document.getElementById('diagModalTitle').textContent = `Diagnostico — ${esc(nome)}`;
+  document.getElementById('diagModalSubtitle').textContent = srv ? `${srv.ip}:${srv.porta}` : '';
+  document.getElementById('diagModalContent').innerHTML = '<div class="diag-loading"><span class="spinner"></span> Executando diagnostico...</div>';
+  // Restaurar botoes originais (podem ter sido sobrescritos por fixPsqlStream, atualizarAgentFromCard, etc.)
+  document.getElementById('diagModalActions').innerHTML = `
+    <button class="btn btn-ghost" onclick="fecharDiagModal()">Fechar</button>
+    <button class="btn btn-warning btn-sm" id="btnCorrigirTudo" onclick="corrigirTudoDiag()">Corrigir Tudo</button>`;
+  document.getElementById('diagModalActions').style.display = 'none';
+  document.getElementById('diagModalOverlay').classList.add('visible');
+
+  try {
+    const res = await fetch(`/api/agent/${id}/diagnostico`);
+    const diag = await res.json();
+    renderDiagnosticoContent(diag);
+    // Atualizar pendencias com base no diagnostico real
+    await atualizarPendenciasFromDiag(id, diag);
+    recarregarListaAtiva();
+  } catch (err) {
+    document.getElementById('diagModalContent').innerHTML = `<p style="color:var(--red)">Erro: ${esc(err.message)}</p>`;
+    document.getElementById('diagModalActions').style.display = 'flex';
+    document.getElementById('btnCorrigirTudo').style.display = 'none';
+  }
+}
+
+function renderDiagnosticoContent(diag, targetElId) {
+  const targetId = targetElId || 'diagModalContent';
+  const isWizard = !!targetElId;
+
+  if (diag.status === 'offline') {
+    document.getElementById(targetId).innerHTML = `<p style="color:var(--red)">Agent offline: ${esc(diag.erro || '')}</p>`;
+    if (!isWizard) {
+      document.getElementById('diagModalActions').style.display = 'flex';
+      document.getElementById('btnCorrigirTudo').style.display = 'none';
+    }
+    return;
+  }
+
+  let html = '<div class="diag-grid">';
+
+  // UAC
+  const uac = diag.uac || {};
+  html += `<div class="diag-item">
+    <div class="diag-item-header">
+      <span class="diag-item-title">UAC</span>
+      <span class="diag-status diag-status-${uac.status === 'ok' ? 'ok' : 'problema'}">${uac.status === 'ok' ? 'OK' : 'Restrito'}</span>
+    </div>
+    <div class="diag-item-detail">${esc(uac.descricao || '')}${uac.status !== 'ok' ? '<br><span style="color:var(--text-muted);font-style:italic">Liberado temporariamente pelo Agent durante o deploy</span>' : ''}</div>
+  </div>`;
+
+  // OpenSSH
+  const ssh = diag.openssh || {};
+  const sshStatusClass = ssh.status === 'ok' ? 'ok' : ssh.status === 'ausente' ? 'ausente' : 'problema';
+  const sshDesc = !ssh.instalado ? 'Nao instalado' : `Servico: ${ssh.servico || '?'} | Inicio: ${ssh.startType || '?'}`;
+  html += `<div class="diag-item">
+    <div class="diag-item-header">
+      <span class="diag-item-title">OpenSSH</span>
+      <span class="diag-status diag-status-${sshStatusClass}">${ssh.status === 'ok' ? 'OK' : ssh.status === 'ausente' ? 'Ausente' : 'Problema'}</span>
+    </div>
+    <div class="diag-item-detail">${esc(sshDesc)}</div>
+    ${ssh.status !== 'ok' ? `<button class="btn btn-warning btn-sm" style="margin-top:8px" onclick="fixItem('openssh')">Corrigir</button>` : ''}
+  </div>`;
+
+  // Firewall
+  const fw = diag.firewall || {};
+  const fwP22 = fw.portas ? (fw.portas[22] || fw.portas['22']) : null;
+  const fwP22Fechada = fwP22 && fwP22.status !== 'ok';
+  html += `<div class="diag-item">
+    <div class="diag-item-header">
+      <span class="diag-item-title">Firewall</span>
+      <span class="diag-status diag-status-${fw.status === 'ok' ? 'ok' : fwP22Fechada ? 'ok' : 'problema'}">${fw.status === 'ok' ? 'OK' : fwP22Fechada ? 'Porta 22 fechada' : 'Problema'}</span>
+    </div>
+    <div class="diag-item-detail">`;
+  if (fw.portas) {
+    Object.keys(fw.portas).forEach(p => {
+      const info = fw.portas[p];
+      const icon = info.status === 'ok' ? '&#10003;' : info.status === 'ausente' ? '&#10007;' : '&#9888;';
+      html += `Porta ${p}: ${icon} ${esc(info.regra || info.status)}<br>`;
+    });
+  }
+  if (fwP22Fechada) {
+    html += '<br><span style="color:var(--text-muted);font-style:italic">Aberta temporariamente pelo Agent durante o deploy</span>';
+  }
+  html += `</div>
+  </div>`;
+
+  // psql
+  const psqlDiag = diag.psql || {};
+  if (psqlDiag.status) {
+    const psqlStatusClass = psqlDiag.status === 'ok' ? 'ok' : psqlDiag.status === 'aviso' ? 'problema' : 'ausente';
+    const psqlLabel = psqlDiag.status === 'ok' ? 'OK' : psqlDiag.status === 'aviso' ? 'Fora do PATH' : 'Ausente';
+    html += `<div class="diag-item">
+      <div class="diag-item-header">
+        <span class="diag-item-title">psql</span>
+        <span class="diag-status diag-status-${psqlStatusClass}">${psqlLabel}</span>
+      </div>
+      <div class="diag-item-detail">${esc(psqlDiag.descricao || '')}</div>
+      ${psqlDiag.status === 'problema' ? `<button class="btn btn-warning btn-sm" style="margin-top:8px" onclick="fixItem('psql')">Instalar psql</button>` : ''}
+      ${psqlDiag.status === 'aviso' ? `<button class="btn btn-warning btn-sm" style="margin-top:8px" onclick="fixItem('psql')">Corrigir PATH</button>` : ''}
+    </div>`;
+  }
+
+  // Servicos
+  const svcs = diag.servicos || {};
+  html += `<div class="diag-item">
+    <div class="diag-item-header">
+      <span class="diag-item-title">Servicos</span>
+      <span class="diag-status diag-status-ok">Info</span>
+    </div>
+    <div class="diag-item-detail">`;
+  if (svcs.servicos) {
+    Object.keys(svcs.servicos).forEach(nome => {
+      const info = svcs.servicos[nome];
+      const icon = info.status === 'ok' ? '&#10003;' : info.status === 'ausente' ? '&#8212;' : '&#9888;';
+      html += `${esc(nome)}: ${icon} ${esc(info.estado || info.status)}<br>`;
+    });
+    if (svcs.apacheDetectado) {
+      html += `<br>Apache detectado: <code>${esc(svcs.apacheDetectado)}</code>`;
+    }
+  }
+  html += '</div></div>';
+
+  // Sistema
+  const sys = diag.sistema || {};
+  html += `<div class="diag-item">
+    <div class="diag-item-header">
+      <span class="diag-item-title">Disco</span>
+      <span class="diag-status diag-status-${sys.disco && sys.disco.status === 'ok' ? 'ok' : 'problema'}">${sys.disco ? sys.disco.livreGB + ' GB livre' : '?'}</span>
+    </div>
+    <div class="diag-item-detail">${sys.disco ? `Usado: ${sys.disco.usadoGB} GB / ${sys.disco.totalGB} GB (${sys.disco.percentual}%)` : 'Indisponivel'}</div>
+  </div>`;
+
+  html += `<div class="diag-item">
+    <div class="diag-item-header">
+      <span class="diag-item-title">Memoria</span>
+      <span class="diag-status diag-status-${sys.memoria && sys.memoria.status === 'ok' ? 'ok' : 'problema'}">${sys.memoria ? sys.memoria.livreMB + ' MB livre' : '?'}</span>
+    </div>
+    <div class="diag-item-detail">${sys.memoria ? `Usado: ${sys.memoria.usadoMB} MB / ${sys.memoria.totalMB} MB (${sys.memoria.percentual}%)` : 'Indisponivel'}</div>
+  </div>`;
+
+  html += '</div>';
+
+  document.getElementById(targetId).innerHTML = html;
+  if (!isWizard) {
+    document.getElementById('diagModalActions').style.display = 'flex';
+    const temProblema = diag.problemas && diag.problemas.length > 0;
+    document.getElementById('btnCorrigirTudo').style.display = temProblema ? '' : 'none';
+  }
+}
+
+async function fixItem(tipo) {
+  if (!diagModalServidorId) return;
+  const id = diagModalServidorId;
+
+  // psql usa rota SSE com log em tempo real
+  if (tipo === 'psql') {
+    fixPsqlStream(id);
+    return;
+  }
+
+  const body = {};
+  if (tipo === 'firewall') {
+    body.porta = 22;
+    body.nome = 'OpenSSH Server (sshd)';
+  }
+  try {
+    const res = await fetch(`/api/agent/${id}/fix/${tipo}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      // Re-executar diagnostico inline e atualizar pendencias
+      const diagRes = await fetch(`/api/agent/${id}/diagnostico`);
+      const diag = await diagRes.json();
+      const inWizard = !!document.getElementById('setupContent');
+      renderDiagnosticoContent(diag, inWizard ? 'setupContent' : undefined);
+      await atualizarPendenciasFromDiag(id, diag);
+      recarregarListaAtiva();
+    } else {
+      alert('Erro: ' + (data.erro || 'Falha na correcao'));
+    }
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+function fixPsqlStream(id) {
+  const allServs = todosServidores.length ? todosServidores : todosServidoresGeral;
+  const srv = allServs.find(s => s.id === id);
+  const nome = srv ? srv.nome : id;
+
+  // Substituir conteudo do diagModal com log
+  document.getElementById('diagModalTitle').textContent = `Instalando psql — ${esc(nome)}`;
+  document.getElementById('diagModalSubtitle').textContent = srv ? `${srv.ip}:${srv.porta}` : '';
+  document.getElementById('diagModalContent').innerHTML = '<div class="deploy-log visible" id="psqlFixLog"></div>';
+  document.getElementById('diagModalActions').style.display = 'none';
+
+  const logEl = document.getElementById('psqlFixLog');
+  function appendLog(msg, tipo) {
+    const ts = new Date().toLocaleTimeString('pt-BR');
+    logEl.innerHTML += `<div class="log-${tipo || 'info'}">[${ts}] ${msg}</div>`;
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  const evtSource = new EventSource(`/api/agent/${id}/fix/psql/stream`);
+
+  evtSource.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.evento === 'log') {
+        appendLog(data.msg, data.tipo);
+      } else if (data.evento === 'concluido') {
+        evtSource.close();
+        appendLog(data.ok ? data.descricao : data.descricao, data.ok ? 'sucesso' : 'erro');
+        // Mostrar botoes: Fechar + Re-diagnosticar
+        document.getElementById('diagModalActions').style.display = 'flex';
+        document.getElementById('diagModalActions').innerHTML = `
+          <button class="btn btn-ghost" onclick="fecharDiagModal()">Fechar</button>
+          <button class="btn btn-primary" onclick="diagnosticarServidor('${id}')">Re-diagnosticar</button>
+        `;
+        recarregarListaAtiva();
+      }
+    } catch (_) {}
+  };
+
+  evtSource.onerror = () => {
+    evtSource.close();
+    appendLog('Conexao perdida', 'erro');
+    document.getElementById('diagModalActions').style.display = 'flex';
+    document.getElementById('diagModalActions').innerHTML = `<button class="btn btn-ghost" onclick="fecharDiagModal()">Fechar</button>`;
+  };
+}
+
+async function corrigirTudoDiag() {
+  if (!diagModalServidorId) return;
+  const id = diagModalServidorId;
+  document.getElementById('btnCorrigirTudo').disabled = true;
+  document.getElementById('btnCorrigirTudo').textContent = 'Corrigindo...';
+
+  try {
+    const res = await fetch(`/api/agent/${id}/fix/tudo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    const data = await res.json();
+    // Re-executar diagnostico
+    diagnosticarServidor(id);
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  } finally {
+    const btn = document.getElementById('btnCorrigirTudo');
+    if (btn) { btn.disabled = false; btn.textContent = 'Corrigir Tudo'; }
+  }
+}
+
+function fecharDiagModal() {
+  diagModalServidorId = null;
+  document.getElementById('diagModalOverlay').classList.remove('visible');
+  // Restaurar botoes originais (wizard sobrescreve innerHTML)
+  document.getElementById('diagModalActions').innerHTML = `
+    <button class="btn btn-ghost" onclick="fecharDiagModal()">Fechar</button>
+    <button class="btn btn-warning btn-sm" id="btnCorrigirTudo" onclick="corrigirTudoDiag()">Corrigir Tudo</button>`;
+  document.getElementById('diagModalActions').style.display = 'none';
+}
+
+// ═══════════ SETUP WIZARD ═══════════
+
+function iniciarSetupWizard(id, nome, ip, porta) {
+  diagModalServidorId = id;
+  document.getElementById('diagModalTitle').textContent = 'Setup do Servidor';
+  document.getElementById('diagModalSubtitle').textContent = `${nome} (${ip}:${porta})`;
+  document.getElementById('diagModalActions').style.display = 'none';
+
+  // Renderizar steps + log
+  document.getElementById('diagModalContent').innerHTML = `
+    <div class="setup-steps" id="setupSteps">
+      <div class="setup-step setup-step-active" id="setupStep-ssh">
+        <span class="setup-step-icon"><span class="spinner"></span></span>
+        <span class="setup-step-label">Conectando SSH</span>
+      </div>
+      <div class="setup-step setup-step-pending" id="setupStep-agent">
+        <span class="setup-step-icon">2</span>
+        <span class="setup-step-label">Instalando Agent</span>
+      </div>
+      <div class="setup-step setup-step-pending" id="setupStep-verificacao">
+        <span class="setup-step-icon">3</span>
+        <span class="setup-step-label">Verificando Agent</span>
+      </div>
+      <div class="setup-step setup-step-pending" id="setupStep-diagnostico">
+        <span class="setup-step-icon">4</span>
+        <span class="setup-step-label">Diagnostico</span>
+      </div>
+    </div>
+    <div class="setup-log" id="setupLog"></div>
+    <div id="setupContent"></div>`;
+
+  document.getElementById('diagModalOverlay').classList.add('visible');
+
+  // Consumir SSE
+  const evtSource = new EventSource(`/api/servidores/${id}/setup/stream`);
+  let faseAtual = 'ssh';
+
+  evtSource.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+
+    if (data.evento === 'log') {
+      // Adicionar linha ao log
+      const logEl = document.getElementById('setupLog');
+      if (logEl) {
+        const line = document.createElement('div');
+        line.className = `log-${data.tipo}`;
+        line.textContent = `[${data.ts}] ${data.msg}`;
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      // Atualizar steps com base no conteudo do log
+      if (data.tipo === 'sucesso' && data.msg.includes('SSH estabelecida')) {
+        marcarSetupStepConcluido('ssh');
+      }
+    }
+
+    if (data.evento === 'fase') {
+      // Marcar step anterior como concluido e ativar novo
+      if (faseAtual && faseAtual !== data.fase) {
+        marcarSetupStepConcluido(faseAtual);
+      }
+      faseAtual = data.fase;
+      marcarSetupStepActive(data.fase);
+      const stepEl = document.getElementById(`setupStep-${data.fase}`);
+      if (stepEl) {
+        stepEl.querySelector('.setup-step-label').textContent = data.descricao + '...';
+      }
+    }
+
+    if (data.evento === 'erro') {
+      evtSource.close();
+      marcarSetupStepErro(faseAtual, data.msg);
+      document.getElementById('diagModalActions').style.display = 'flex';
+      document.getElementById('diagModalActions').innerHTML = `
+        <button class="btn btn-ghost" onclick="fecharSetupWizard()">Fechar</button>`;
+    }
+
+    if (data.evento === 'resultado') {
+      evtSource.close();
+
+      if (!data.ok) {
+        // Falha em alguma fase
+        marcarSetupStepErro(data.fase || faseAtual);
+        document.getElementById('diagModalActions').style.display = 'flex';
+        document.getElementById('diagModalActions').innerHTML = `
+          <button class="btn btn-ghost" onclick="fecharSetupWizard()">Fechar</button>`;
+        recarregarListaAtiva();
+        return;
+      }
+
+      // Sucesso — marcar todos os steps
+      marcarSetupStepConcluido('ssh');
+      marcarSetupStepConcluido('agent');
+      marcarSetupStepConcluido('verificacao');
+
+      if (!data.pendencias || data.pendencias.length === 0) {
+        marcarSetupStepConcluido('diagnostico');
+        document.getElementById('setupContent').innerHTML = `
+          <div class="setup-success-box">Servidor pronto!</div>`;
+        document.getElementById('diagModalActions').style.display = 'flex';
+        document.getElementById('diagModalActions').innerHTML = `
+          <button class="btn btn-primary" onclick="fecharSetupWizard()">Concluir</button>`;
+        recarregarListaAtiva();
+        setTimeout(() => {
+          if (document.getElementById('diagModalOverlay').classList.contains('visible')) {
+            fecharSetupWizard();
+          }
+        }, 3000);
+      } else {
+        marcarSetupStepConcluido('diagnostico');
+        document.getElementById('setupContent').innerHTML = `
+          <div class="setup-pendencias-header">Pendencias encontradas: ${data.pendencias.join(', ')}</div>
+          <div id="setupDiagGrid"></div>`;
+        if (data.diagnostico) {
+          renderDiagnosticoContent(data.diagnostico, 'setupDiagGrid');
+        }
+        document.getElementById('diagModalActions').style.display = 'flex';
+        document.getElementById('diagModalActions').innerHTML = `
+          <button class="btn btn-ghost" onclick="fecharSetupWizard()">Pular</button>
+          <button class="btn btn-warning btn-sm" id="btnSetupCorrigirTudo" onclick="setupInstalarTudo('${id}')">Instalar Tudo</button>`;
+        recarregarListaAtiva();
+      }
+    }
+  };
+
+  evtSource.onerror = () => {
+    evtSource.close();
+  };
+}
+
+async function setupInstalarTudo(id) {
+  const btn = document.getElementById('btnSetupCorrigirTudo');
+  if (btn) { btn.disabled = true; btn.textContent = 'Corrigindo...'; }
+
+  // Adicionar log visual
+  const logEl = document.getElementById('setupLog');
+  if (logEl) {
+    const ts = new Date().toLocaleTimeString('pt-BR');
+    const line = document.createElement('div');
+    line.className = 'log-progresso';
+    line.textContent = `[${ts}] Executando correcoes automaticas...`;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  try {
+    await fetch(`/api/agent/${id}/fix/tudo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+
+    // Re-diagnosticar
+    if (logEl) {
+      const ts = new Date().toLocaleTimeString('pt-BR');
+      const line = document.createElement('div');
+      line.className = 'log-progresso';
+      line.textContent = `[${ts}] Re-executando diagnostico...`;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    const diagRes = await fetch(`/api/agent/${id}/diagnostico`);
+    const diag = await diagRes.json();
+    // Garantir que o container do grid existe
+    if (!document.getElementById('setupDiagGrid')) {
+      const sc = document.getElementById('setupContent');
+      if (sc) sc.innerHTML = '<div id="setupDiagGrid"></div>';
+    }
+    renderDiagnosticoContent(diag, 'setupDiagGrid');
+    await atualizarPendenciasFromDiag(id, diag);
+
+    const pendencias = extrairPendenciasDeDiag(diag);
+    if (pendencias.length === 0) {
+      if (logEl) {
+        const ts = new Date().toLocaleTimeString('pt-BR');
+        const line = document.createElement('div');
+        line.className = 'log-sucesso';
+        line.textContent = `[${ts}] Todas as pendencias resolvidas!`;
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      const setupContent = document.getElementById('setupContent');
+      if (setupContent) setupContent.innerHTML = `<div class="setup-success-box">Servidor pronto!</div>`;
+      document.getElementById('diagModalActions').innerHTML = `
+        <button class="btn btn-primary" onclick="fecharSetupWizard()">Concluir</button>`;
+    } else {
+      if (logEl) {
+        const ts = new Date().toLocaleTimeString('pt-BR');
+        const line = document.createElement('div');
+        line.className = 'log-erro';
+        line.textContent = `[${ts}] ${pendencias.length} pendencia(s) restante(s): ${pendencias.join(', ')}`;
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      if (btn) { btn.disabled = false; btn.textContent = 'Instalar Tudo'; }
+    }
+    recarregarListaAtiva();
+  } catch (err) {
+    alert('Erro: ' + err.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Instalar Tudo'; }
+  }
+}
+
+function fecharSetupWizard() {
+  fecharDiagModal();
+  verificarTodosAgents().then(() => recarregarListaAtiva());
+}
+
+function instalarAgentFromCard(id) {
+  const srv = todosServidores.find(s => s.id === id) || todosServidoresGeral.find(s => s.id === id);
+  if (!srv) return;
+  iniciarSetupWizard(id, srv.nome, srv.ip, srv.porta);
+}
+
+function marcarSetupStepConcluido(stepId) {
+  const el = document.getElementById(`setupStep-${stepId}`);
+  if (!el) return;
+  el.className = 'setup-step setup-step-done';
+  el.querySelector('.setup-step-icon').innerHTML = '&#10003;';
+}
+
+function marcarSetupStepErro(stepId, msg) {
+  const el = document.getElementById(`setupStep-${stepId}`);
+  if (!el) return;
+  el.className = 'setup-step setup-step-error';
+  el.querySelector('.setup-step-icon').innerHTML = '&#10007;';
+  if (msg) el.querySelector('.setup-step-label').textContent = msg;
+}
+
+function marcarSetupStepActive(stepId) {
+  const el = document.getElementById(`setupStep-${stepId}`);
+  if (!el) return;
+  el.className = 'setup-step setup-step-active';
+  el.querySelector('.setup-step-icon').innerHTML = '<span class="spinner"></span>';
+}
+
+function extrairPendenciasDeDiag(diag) {
+  const pendencias = [];
+  // UAC e Firewall sao gerenciados temporariamente pelo Agent durante o deploy — nao sao pendencias
+  if (diag.openssh && diag.openssh.status !== 'ok') pendencias.push('openssh');
+  return pendencias;
+}
+
+async function atualizarPendenciasFromDiag(id, diag) {
+  const pendencias = extrairPendenciasDeDiag(diag);
+  await fetch(`/api/servidores/${id}/pendencias`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pendencias }),
+  });
+}
+
+async function instalarAgent() {
+  const id = document.getElementById('editId').value;
+  if (!id) return alert('Salve o servidor antes de instalar o agent');
+
+  const nome = document.getElementById('fNome').value || id;
+  const ip = document.getElementById('fIp').value;
+  const porta = parseInt(document.getElementById('fPorta').value) || 22;
+
+  fecharModal();
+  iniciarSetupWizard(id, nome, ip, porta);
+}
+
+function atualizarAgent() {
+  const id = document.getElementById('editId').value;
+  if (!id) return;
+  // Fechar modal de edicao e delegar para a funcao com SSE
+  fecharModal();
+  atualizarAgentFromCard(id);
+}
+
+async function gerarScriptAgent() {
+  const id = document.getElementById('editId').value;
+  if (!id) return alert('Salve o servidor antes de gerar o script');
+
+  try {
+    const res = await fetch(`/api/agent/gerar-script/${id}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      // Copiar script para clipboard
+      const ta = document.createElement('textarea');
+      ta.value = data.script;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      alert('Script copiado para a area de transferencia!\n\nCopie o fdeploy-agent.exe e o .bat para o servidor e execute como administrador.');
+    } else {
+      alert('Erro: ' + (data.erro || 'Falha ao gerar script'));
     }
   } catch (err) {
     alert('Erro: ' + err.message);

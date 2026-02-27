@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const zlib = require('zlib');
 const crypto = require('crypto');
+const http = require('http');
 const { spawn, exec } = require('child_process');
 const { NodeSSH } = require('node-ssh');
 
@@ -61,6 +62,30 @@ if (!fs.existsSync(VERSOES_GERAL_DIR)) fs.mkdirSync(VERSOES_GERAL_DIR, { recursi
 const SCRIPTS_INDEX_PATH = path.join(DATA_DIR, 'scripts_index.json');
 const DEFAULT_SCRIPTS_ROOT = 'C:\\Net-Sql\\Todos\\Scripts';
 const PASTA_SCRIPTS_PATTERN = /^Scripts \d{4}$/i;
+
+// ── psql Client ──
+const PSQL_CACHE_PATH = path.join(DATA_DIR, 'psql_client.zip');
+const PSQL_REMOTE_DIR = 'C:\\f\\pgsql';
+
+// ── Agent ──
+const AGENT_EXE_PATH = path.join(APP_ROOT, 'dist', 'fdeploy-agent.exe');
+const AGENT_NSSM_PATH = path.join(APP_ROOT, 'nssm', 'nssm.exe');
+const AGENT_REMOTE_DIR = 'C:\\f\\FDeploy Agent';
+const AGENT_SERVICE_NAME = 'FDeployAgent';
+const AGENT_DEFAULT_PORT = 3501;
+
+// ── Versao esperada do Agent ──
+const AGENT_EXPECTED_VERSION = (() => {
+  try {
+    // Dev: ler de agent/package.json
+    const agentPkg = path.join(__dirname, 'agent', 'package.json');
+    if (fs.existsSync(agentPkg)) return JSON.parse(fs.readFileSync(agentPkg, 'utf8')).version || '0.0.0';
+    // Producao (pkg): ler de data/agent-version.txt
+    const versionFile = path.join(APP_ROOT, 'data', 'agent-version.txt');
+    if (fs.existsSync(versionFile)) return fs.readFileSync(versionFile, 'utf8').trim();
+    return '0.0.0';
+  } catch (_) { return '0.0.0'; }
+})();
 
 // ── Criptografia AES ──
 const CRYPTO_KEY = crypto.scryptSync('fdeploy-secret-2026', 'salt', 32);
@@ -266,15 +291,14 @@ async function executarScriptsSQL(ssh, servidor, scriptsIndex, emit, logMsg, ope
     return { sucesso: true, executados: 0, pulado: true };
   }
 
-  // Verificar psql
+  // Verificar psql (com fallback para C:\f\pgsql\psql.exe)
   logMsg('Verificando disponibilidade do psql...', 'progresso');
-  const psqlCheck = await ssh.execCommand('where psql 2>nul');
-  const psqlVersion = await ssh.execCommand('psql --version 2>nul');
-  if (psqlCheck.code !== 0 && !(psqlVersion.stdout || '').includes('psql')) {
+  const psqlCmd = await resolverPsqlRemoto(ssh);
+  if (!psqlCmd) {
     logMsg('psql nao encontrado no servidor — pulando scripts SQL', 'erro');
     return { sucesso: true, executados: 0, pulado: true, aviso: 'psql nao encontrado' };
   }
-  logMsg('psql disponivel', 'sucesso');
+  logMsg(psqlCmd === 'psql' ? 'psql disponivel no PATH' : `psql encontrado em ${PSQL_REMOTE_DIR}`, 'sucesso');
 
   // Consultar versao_bd
   const pgPass = decrypt(servidor.pgSenha);
@@ -286,7 +310,7 @@ async function executarScriptsSQL(ssh, servidor, scriptsIndex, emit, logMsg, ope
   const pgLabel = pgRemoto ? `${pgDb} (remoto: ${pgHost})` : pgDb;
 
   logMsg(`Consultando versao do banco "${pgLabel}"...`, 'progresso');
-  const versionCmd = `set "PGPASSWORD=${pgPass}"&& psql -U ${pgUser} -d ${pgDb} -p ${pgPort} -h ${pgHost} -t -A -c "SELECT versao_bd FROM re.servidor"`;
+  const versionCmd = `set "PGPASSWORD=${pgPass}"&& ${psqlCmd} -U ${pgUser} -d ${pgDb} -p ${pgPort} -h ${pgHost} -t -A -c "SELECT versao_bd FROM re.servidor"`;
   const versionResult = await ssh.execCommand(versionCmd);
 
   const versaoBDStr = (versionResult.stdout || '').trim();
@@ -358,7 +382,7 @@ async function executarScriptsSQL(ssh, servidor, scriptsIndex, emit, logMsg, ope
       await ssh.putFile(localScriptPath, remoteScriptPath);
 
       // Executar com psql --single-transaction
-      const execCmd = `set "PGPASSWORD=${pgPass}"&& psql -U ${pgUser} -d ${pgDb} -p ${pgPort} -h ${pgHost} --single-transaction -f "${remoteScriptPath}" 2>&1`;
+      const execCmd = `set "PGPASSWORD=${pgPass}"&& ${psqlCmd} -U ${pgUser} -d ${pgDb} -p ${pgPort} -h ${pgHost} --single-transaction -f "${remoteScriptPath}" 2>&1`;
       const execResult = await ssh.execCommand(execCmd);
 
       const output = (execResult.stdout || '').trim();
@@ -458,6 +482,101 @@ function atualizarScriptOriginal(filePath, pgBanco, operador, nomeServidor) {
   }
 }
 
+// ── Resolver caminho do psql no servidor remoto (retorna 'psql' ou caminho completo) ──
+async function resolverPsqlRemoto(ssh) {
+  const check = await ssh.execCommand('where psql 2>nul');
+  if (check.code === 0 && (check.stdout || '').trim()) return 'psql';
+  const fallback = await ssh.execCommand(`"${PSQL_REMOTE_DIR}\\psql.exe" --version 2>nul`);
+  if ((fallback.stdout || '').includes('psql')) return `"${PSQL_REMOTE_DIR}\\psql.exe"`;
+  return null;
+}
+
+// ── Criar ZIP com binarios minimos do psql ──
+async function criarZipPsql() {
+  // Se cache existe, retorna direto
+  if (fs.existsSync(PSQL_CACHE_PATH)) {
+    console.log('[psql] Usando cache existente:', PSQL_CACHE_PATH);
+    return PSQL_CACHE_PATH;
+  }
+
+  // Procurar PostgreSQL local (18 ate 12)
+  let pgBinDir = null;
+  for (let v = 18; v >= 12; v--) {
+    const dir = `C:\\Program Files\\PostgreSQL\\${v}\\bin`;
+    if (fs.existsSync(path.join(dir, 'psql.exe'))) {
+      pgBinDir = dir;
+      break;
+    }
+  }
+  if (!pgBinDir) {
+    throw new Error('PostgreSQL nao encontrado localmente (C:\\Program Files\\PostgreSQL\\{18..12}\\bin)');
+  }
+  console.log('[psql] PostgreSQL encontrado em:', pgBinDir);
+
+  // Arquivos minimos necessarios
+  const arquivosExatos = [
+    'psql.exe', 'libpq.dll', 'libcrypto-3-x64.dll', 'libssl-3-x64.dll',
+    'libiconv-2.dll', 'libintl-9.dll', 'zlib1.dll', 'libwinpthread-1.dll',
+  ];
+  const arquivosWildcard = ['icudt', 'icuuc', 'icuin'];
+
+  // Coletar lista de arquivos
+  const arquivos = [];
+  for (const nome of arquivosExatos) {
+    const full = path.join(pgBinDir, nome);
+    if (fs.existsSync(full)) {
+      arquivos.push(full);
+    } else {
+      console.log(`[psql] Aviso: ${nome} nao encontrado, pulando`);
+    }
+  }
+
+  // Wildcards (icudt*.dll, icuuc*.dll, icuin*.dll)
+  const allFiles = fs.readdirSync(pgBinDir);
+  for (const prefix of arquivosWildcard) {
+    const match = allFiles.find(f => f.toLowerCase().startsWith(prefix) && f.toLowerCase().endsWith('.dll'));
+    if (match) {
+      arquivos.push(path.join(pgBinDir, match));
+    } else {
+      console.log(`[psql] Aviso: ${prefix}*.dll nao encontrado, pulando`);
+    }
+  }
+
+  if (!arquivos.find(f => f.endsWith('psql.exe'))) {
+    throw new Error('psql.exe nao encontrado em ' + pgBinDir);
+  }
+
+  console.log(`[psql] Empacotando ${arquivos.length} arquivos...`);
+
+  // Criar ZIP via PowerShell
+  const tmpDir = path.join(UPLOADS_DIR, `_psql_tmp_${Date.now()}`);
+  fs.mkdirSync(tmpDir, { recursive: true });
+
+  // Copiar arquivos para pasta temp
+  for (const arq of arquivos) {
+    fs.copyFileSync(arq, path.join(tmpDir, path.basename(arq)));
+  }
+
+  // Criar ZIP
+  const psScript = `
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    if (Test-Path "${PSQL_CACHE_PATH.replace(/\\/g, '\\\\')}") { Remove-Item "${PSQL_CACHE_PATH.replace(/\\/g, '\\\\')}" -Force }
+    [System.IO.Compression.ZipFile]::CreateFromDirectory("${tmpDir.replace(/\\/g, '\\\\')}", "${PSQL_CACHE_PATH.replace(/\\/g, '\\\\')}")
+  `;
+  const result = await executarPowerShell(psScript, 60000);
+
+  // Limpar pasta temp
+  try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}
+
+  if (!fs.existsSync(PSQL_CACHE_PATH)) {
+    throw new Error('Falha ao criar ZIP do psql: ' + (result.stderr || 'arquivo nao gerado'));
+  }
+
+  const size = (fs.statSync(PSQL_CACHE_PATH).size / 1024 / 1024).toFixed(1);
+  console.log(`[psql] ZIP criado: ${PSQL_CACHE_PATH} (${size} MB)`);
+  return PSQL_CACHE_PATH;
+}
+
 async function conectarSSH(servidor) {
   const ssh = new NodeSSH();
   await ssh.connect({
@@ -476,6 +595,205 @@ async function conectarSSH(servidor) {
     });
   }
   return ssh;
+}
+
+// ══════════════════════════════════════════
+// HELPERS — AGENT
+// ══════════════════════════════════════════
+
+function verificarAgent(servidor) {
+  const port = servidor.agentPort || AGENT_DEFAULT_PORT;
+  const url = `http://${servidor.ip}:${port}/ping`;
+  return new Promise((resolve) => {
+    const req = http.get(url, { timeout: 5000 }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          resolve({ online: true, ...json });
+        } catch (_) {
+          resolve({ online: false });
+        }
+      });
+    });
+    req.on('error', () => resolve({ online: false }));
+    req.on('timeout', () => { req.destroy(); resolve({ online: false }); });
+  });
+}
+
+function chamarAgent(servidor, method, path, body) {
+  const port = servidor.agentPort || AGENT_DEFAULT_PORT;
+  const token = servidor.agentToken ? decrypt(servidor.agentToken) : '';
+  const url = new URL(`http://${servidor.ip}:${port}${path}`);
+
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: url.hostname,
+      port: url.port,
+      path: url.pathname + url.search,
+      method,
+      timeout: 60000,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    };
+
+    let bodyData = null;
+    if (body) {
+      if (Buffer.isBuffer(body)) {
+        options.headers['Content-Type'] = 'application/octet-stream';
+        options.headers['Content-Length'] = body.length;
+        bodyData = body;
+      } else {
+        bodyData = JSON.stringify(body);
+        options.headers['Content-Type'] = 'application/json';
+        options.headers['Content-Length'] = Buffer.byteLength(bodyData);
+      }
+    }
+
+    const req = http.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (_) {
+          resolve({ ok: false, erro: 'Resposta invalida do agent' });
+        }
+      });
+    });
+    req.on('error', (err) => reject(err));
+    req.on('timeout', () => { req.destroy(); reject(new Error('Agent timeout')); });
+    if (bodyData) req.write(bodyData);
+    req.end();
+  });
+}
+
+// ── Validar Agent antes de permitir deploy ──
+async function validarAgentParaDeploy(servidor) {
+  if (!servidor.agentToken) {
+    return { ok: false, motivo: 'Agent nao instalado', codigo: 'sem_agent' };
+  }
+  const status = await verificarAgent(servidor);
+  if (!status.online) {
+    return { ok: false, motivo: 'Agent offline', codigo: 'agent_offline' };
+  }
+  const versaoRemota = status.version || '0.0.0';
+  if (versaoRemota !== AGENT_EXPECTED_VERSION) {
+    return { ok: false, motivo: `Agent desatualizado (${versaoRemota} → ${AGENT_EXPECTED_VERSION})`, codigo: 'agent_desatualizado' };
+  }
+  return { ok: true };
+}
+
+// ── Preparar servidor para deploy via Agent (temporario) ──
+// Diagnostica, salva estado original, habilita UAC + firewall 22 + sshd
+// Retorna { ok, mudancas: { uac, firewall22, sshd } } para reverter depois
+async function prepararDeployViaAgent(servidor, logMsg) {
+  const mudancas = { uac: false, firewall22: false, sshd: false };
+  try {
+    const status = await verificarAgent(servidor);
+    if (!status.online) return { ok: false, mudancas };
+
+    logMsg('Agent detectado! Preparando servidor para deploy...', 'progresso');
+    const diag = await chamarAgent(servidor, 'GET', '/diagnostico');
+
+    // UAC — habilitar se bloqueado
+    if (diag.uac && diag.uac.status !== 'ok') {
+      logMsg('Habilitando UAC temporariamente (LocalAccountTokenFilterPolicy)...', 'progresso');
+      const fix = await chamarAgent(servidor, 'POST', '/fix/uac');
+      if (fix.ok) {
+        mudancas.uac = true;
+        logMsg('UAC habilitado (sera revertido apos deploy)', 'sucesso');
+      } else {
+        logMsg(`Falha ao habilitar UAC: ${fix.erro}`, 'erro');
+      }
+    }
+
+    // OpenSSH — instalar se ausente, iniciar se parado
+    if (diag.openssh && diag.openssh.status !== 'ok') {
+      if (!diag.openssh.instalado) {
+        logMsg('Instalando OpenSSH via Agent...', 'progresso');
+        const fix = await chamarAgent(servidor, 'POST', '/fix/openssh/instalar');
+        if (fix.ok) {
+          logMsg('OpenSSH instalado', 'sucesso');
+          // Apos instalar, sshd inicia automaticamente — marcar para parar depois
+          mudancas.sshd = true;
+        } else {
+          logMsg(`Falha ao instalar OpenSSH: ${fix.erro}`, 'erro');
+        }
+      } else if (diag.openssh.servico !== 'running') {
+        logMsg('Iniciando servico sshd temporariamente via Agent...', 'progresso');
+        const fix = await chamarAgent(servidor, 'POST', '/fix/servico/iniciar', { nome: 'sshd' });
+        if (fix.ok) {
+          mudancas.sshd = true;
+          logMsg('sshd iniciado (sera parado apos deploy)', 'sucesso');
+        } else {
+          logMsg(`Falha ao iniciar sshd: ${fix.erro}`, 'erro');
+        }
+      }
+    }
+    // Se sshd ja estava running, nao marcar para parar (nao mudamos nada)
+
+    // Firewall porta 22 — abrir se fechada
+    if (diag.firewall && diag.firewall.portas && diag.firewall.portas[22] && diag.firewall.portas[22].status !== 'ok') {
+      logMsg('Abrindo firewall porta 22 temporariamente via Agent...', 'progresso');
+      const fix = await chamarAgent(servidor, 'POST', '/fix/firewall', { porta: 22, nome: 'FDeploy SSH Temp' });
+      if (fix.ok) {
+        mudancas.firewall22 = true;
+        logMsg('Firewall porta 22 aberta (sera fechada apos deploy)', 'sucesso');
+      } else {
+        logMsg(`Falha ao abrir firewall: ${fix.erro}`, 'erro');
+      }
+    }
+
+    return { ok: true, mudancas };
+  } catch (err) {
+    logMsg(`Agent preparacao: ${err.message}`, 'erro');
+    return { ok: false, mudancas };
+  }
+}
+
+// ── Reverter preparacao do servidor apos deploy via Agent ──
+// Desfaz somente o que foi alterado em prepararDeployViaAgent
+// Chamado APOS ssh.dispose() — tudo via Agent (porta 3501, independe do SSH)
+async function reverterDeployViaAgent(servidor, mudancas, logMsg) {
+  if (!mudancas || (!mudancas.uac && !mudancas.firewall22 && !mudancas.sshd)) return;
+
+  try {
+    const status = await verificarAgent(servidor);
+    if (!status.online) {
+      logMsg('Agent offline — nao foi possivel reverter preparacao', 'erro');
+      return;
+    }
+
+    logMsg('Revertendo preparacao temporaria do Agent...', 'progresso');
+
+    // 1. Reverter UAC (se habilitamos) — fazer ANTES de parar sshd
+    if (mudancas.uac) {
+      logMsg('Revertendo UAC (LocalAccountTokenFilterPolicy = 0)...', 'progresso');
+      const fix = await chamarAgent(servidor, 'POST', '/fix/uac/revert');
+      logMsg(fix.ok ? 'UAC revertido' : `Aviso ao reverter UAC: ${fix.erro || 'erro'}`, fix.ok ? 'sucesso' : 'progresso');
+    }
+
+    // 2. Fechar firewall porta 22 (se abrimos)
+    if (mudancas.firewall22) {
+      logMsg('Fechando firewall porta 22...', 'progresso');
+      const fix = await chamarAgent(servidor, 'POST', '/fix/firewall/remover', { nome: 'FDeploy SSH Temp' });
+      logMsg(fix.ok ? 'Firewall porta 22 fechada' : `Aviso ao fechar firewall: ${fix.erro || 'erro'}`, fix.ok ? 'sucesso' : 'progresso');
+    }
+
+    // 3. Parar sshd (se iniciamos) — por ultimo, pois nao afeta Agent
+    if (mudancas.sshd) {
+      logMsg('Parando servico sshd...', 'progresso');
+      const fix = await chamarAgent(servidor, 'POST', '/fix/servico/parar', { nome: 'sshd' });
+      logMsg(fix.ok ? 'sshd parado' : `Aviso ao parar sshd: ${fix.erro || 'erro'}`, fix.ok ? 'sucesso' : 'progresso');
+    }
+
+    logMsg('Preparacao temporaria revertida', 'sucesso');
+  } catch (err) {
+    logMsg(`Aviso ao reverter preparacao: ${err.message}`, 'progresso');
+  }
 }
 
 // ── Executar script PowerShell local (non-blocking, via arquivo temp) ──
@@ -942,6 +1260,7 @@ async function executarDeployGeral(servidor, emit, operador) {
   let sucesso = false;
   let scriptsResult = null;
   let firewallAberta = false;
+  let agentMudancas = null; // rastreia o que o Agent preparou temporariamente
 
   function logMsg(msg, tipo = 'info') {
     const ts = new Date().toLocaleTimeString('pt-BR');
@@ -953,6 +1272,15 @@ async function executarDeployGeral(servidor, emit, operador) {
 
   function emitEtapa(etapaId) {
     if (emit) emit({ evento: 'etapa', etapa: etapaId });
+  }
+
+  // Validar Agent antes do deploy
+  const validacao = await validarAgentParaDeploy(servidor);
+  if (!validacao.ok) {
+    logMsg(`Deploy bloqueado: ${validacao.motivo}`, 'erro');
+    const entry = { servidor: servidor.nome, ip: servidor.ip, sucesso: false, duracao: '0s', data: new Date().toISOString(), log, bloqueadoPorAgent: true };
+    salvarDeployLogGeral(entry);
+    return entry;
   }
 
   const versaoAtual = lerVersaoGeral();
@@ -981,19 +1309,42 @@ async function executarDeployGeral(servidor, emit, operador) {
   logMsg(`Versao ${versaoAtual} — EXEs: ${formatMB(fs.statSync(exesZip).size)} MB, DLLs: ${formatMB(fs.statSync(dllsZip).size)} MB, Reports: ${formatMB(fs.statSync(reportsZip).size)} MB`, 'sucesso');
 
   try {
-    // Conectar SSH
+    // Conectar SSH (com fallback Agent prepare → WMI)
     logMsg('Conectando via SSH...', 'progresso');
     try {
       ssh = await conectarSSH(servidor);
     } catch (sshErr) {
       logMsg(`Falha na conexao SSH: ${sshErr.message}`, 'erro');
-      const instalou = await instalarSSHRemoto(servidor, logMsg);
-      if (instalou) {
-        logMsg('Tentando conectar via SSH novamente...', 'progresso');
-        ssh = await conectarSSH(servidor);
-        firewallAberta = true;
+
+      // Camada 2: Preparar via Agent (temporario — sera revertido no finally)
+      const resultado = await prepararDeployViaAgent(servidor, logMsg);
+      agentMudancas = resultado.mudancas;
+      if (resultado.ok) {
+        try {
+          logMsg('Tentando conectar via SSH apos preparacao do Agent...', 'progresso');
+          ssh = await conectarSSH(servidor);
+        } catch (_) {
+          // Agent preparou mas SSH ainda falha — tentar WMI
+          logMsg('SSH ainda falha apos Agent — tentando WMI...', 'progresso');
+          const instalou = await instalarSSHRemoto(servidor, logMsg);
+          if (instalou) {
+            logMsg('Tentando conectar via SSH novamente...', 'progresso');
+            ssh = await conectarSSH(servidor);
+            firewallAberta = true;
+          } else {
+            throw sshErr;
+          }
+        }
       } else {
-        throw sshErr;
+        // Camada 3: Fallback WMI
+        const instalou = await instalarSSHRemoto(servidor, logMsg);
+        if (instalou) {
+          logMsg('Tentando conectar via SSH novamente...', 'progresso');
+          ssh = await conectarSSH(servidor);
+          firewallAberta = true;
+        } else {
+          throw sshErr;
+        }
       }
     }
     logMsg('Conectado!', 'sucesso');
@@ -1096,6 +1447,8 @@ async function executarDeployGeral(servidor, emit, operador) {
   } finally {
     if (firewallAberta && ssh) await removerFirewallSSH(ssh, logMsg);
     if (ssh) ssh.dispose();
+    // Reverter preparacao temporaria do Agent (UAC, firewall 22, sshd)
+    if (agentMudancas) await reverterDeployViaAgent(servidor, agentMudancas, logMsg);
   }
 
   const duracao = ((Date.now() - inicio) / 1000).toFixed(1);
@@ -1141,8 +1494,10 @@ app.get('/api/servidores', (req, res) => {
     ...s,
     senha: undefined,
     pgSenha: undefined,
+    agentToken: undefined,
     temSenha: !!s.senha,
     temPgSenha: !!s.pgSenha,
+    temAgentToken: !!s.agentToken,
     versaoDeployada: s.versaoDeployada || null,
     versaoGeralDeployada: s.versaoGeralDeployada || null,
     ultimaAtualizacaoGeral: s.ultimaAtualizacaoGeral || null,
@@ -1153,6 +1508,8 @@ app.get('/api/servidores', (req, res) => {
     pgHost: s.pgHost || '',
     versaoScriptBD: s.versaoScriptBD || null,
     grupoReplicacao: s.grupoReplicacao || null,
+    agentPort: s.agentPort || AGENT_DEFAULT_PORT,
+    agentVersao: s.agentVersao || null,
   }));
   res.json(servidores);
 });
@@ -1189,7 +1546,7 @@ app.put('/api/servidores/:id', (req, res) => {
   const idx = servidores.findIndex(s => s.id === req.params.id);
   if (idx === -1) return res.status(404).json({ erro: 'Servidor não encontrado' });
 
-  const { nome, ip, porta, usuario, senha, descricao, temPostgreSQL, pgBanco, pgPorta, pgUsuario, pgSenha, pgHost } = req.body;
+  const { nome, ip, porta, usuario, senha, descricao, temPostgreSQL, pgBanco, pgPorta, pgUsuario, pgSenha, pgHost, agentPort } = req.body;
   if (nome) servidores[idx].nome = nome;
   if (ip) servidores[idx].ip = ip;
   if (porta !== undefined) servidores[idx].porta = porta;
@@ -1202,7 +1559,222 @@ app.put('/api/servidores/:id', (req, res) => {
   if (pgUsuario !== undefined) servidores[idx].pgUsuario = pgUsuario;
   if (pgSenha) servidores[idx].pgSenha = encrypt(pgSenha);
   if (pgHost !== undefined) servidores[idx].pgHost = pgHost;
+  if (agentPort !== undefined) servidores[idx].agentPort = agentPort;
 
+  salvarServidores(servidores);
+  res.json({ ok: true });
+});
+
+// ── Setup Wizard: instalar agent + diagnosticar ao criar servidor (SSE) ──
+app.get('/api/servidores/:id/setup/stream', (req, res) => {
+  req.setTimeout(5 * 60 * 1000);
+  res.setTimeout(5 * 60 * 1000);
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  });
+
+  const servidores = lerServidores();
+  const idx = servidores.findIndex(s => s.id === req.params.id);
+  if (idx === -1) {
+    res.write(`data: ${JSON.stringify({ evento: 'erro', msg: 'Servidor nao encontrado' })}\n\n`);
+    res.end();
+    return;
+  }
+  const servidor = servidores[idx];
+
+  function emit(data) {
+    try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch (_) {}
+  }
+
+  function logEtapa(msg, tipo) {
+    const ts = new Date().toLocaleTimeString('pt-BR');
+    emit({ evento: 'log', ts, msg, tipo: tipo || 'progresso' });
+    console.log(`[Setup ${servidor.nome}] ${msg}`);
+  }
+
+  (async () => {
+    // 1. Verificar agent.exe local
+    logEtapa('Verificando fdeploy-agent.exe local...', 'progresso');
+    if (!fs.existsSync(AGENT_EXE_PATH)) {
+      logEtapa('fdeploy-agent.exe nao encontrado em dist/. Execute o build primeiro.', 'erro');
+      emit({ evento: 'resultado', ok: false, fase: 'agent-exe', pendencias: ['agent'] });
+      servidores[idx].pendencias = ['agent'];
+      salvarServidores(servidores);
+      res.end();
+      return;
+    }
+    logEtapa('fdeploy-agent.exe encontrado', 'sucesso');
+
+    // 2. Conectar SSH (com fallback Agent prepare → WMI)
+    let ssh;
+    let firewallAberta = false;
+    let agentMudancas = null;
+    logEtapa(`Conectando via SSH em ${servidor.ip}:${servidor.porta || 22}...`, 'progresso');
+    try {
+      ssh = await conectarSSH(servidor);
+      logEtapa('Conexao SSH estabelecida', 'sucesso');
+    } catch (sshErr) {
+      logEtapa(`Falha na conexao SSH: ${sshErr.message}`, 'erro');
+
+      // Camada 2: Preparar via Agent (se ja existir de antes — temporario)
+      const resultado = await prepararDeployViaAgent(servidor, logEtapa);
+      agentMudancas = resultado.mudancas;
+      if (resultado.ok) {
+        try {
+          logEtapa('Tentando reconectar via SSH apos preparacao do Agent...', 'progresso');
+          ssh = await conectarSSH(servidor);
+          logEtapa('Conexao SSH estabelecida apos preparacao', 'sucesso');
+        } catch (_) {
+          logEtapa('SSH ainda falha apos Agent — tentando WMI/DCOM...', 'progresso');
+          const instalou = await instalarSSHRemoto(servidor, logEtapa);
+          if (instalou) {
+            logEtapa('Tentando conectar via SSH novamente...', 'progresso');
+            try {
+              ssh = await conectarSSH(servidor);
+              firewallAberta = true;
+              logEtapa('Conexao SSH estabelecida via WMI', 'sucesso');
+            } catch (e) {
+              logEtapa(`SSH falhou mesmo apos WMI: ${e.message}`, 'erro');
+              emit({ evento: 'resultado', ok: false, fase: 'ssh', pendencias: ['ssh'] });
+              servidores[idx].pendencias = ['ssh'];
+              salvarServidores(servidores);
+              if (agentMudancas) await reverterDeployViaAgent(servidor, agentMudancas, logEtapa);
+              res.end();
+              return;
+            }
+          } else {
+            logEtapa('WMI tambem falhou — servidor inacessivel', 'erro');
+            emit({ evento: 'resultado', ok: false, fase: 'ssh', pendencias: ['ssh'] });
+            servidores[idx].pendencias = ['ssh'];
+            salvarServidores(servidores);
+            if (agentMudancas) await reverterDeployViaAgent(servidor, agentMudancas, logEtapa);
+            res.end();
+            return;
+          }
+        }
+      } else {
+        // Camada 3: Fallback WMI direto
+        logEtapa('Tentando instalar OpenSSH via WMI/DCOM...', 'progresso');
+        const instalou = await instalarSSHRemoto(servidor, logEtapa);
+        if (instalou) {
+          logEtapa('Tentando conectar via SSH novamente...', 'progresso');
+          try {
+            ssh = await conectarSSH(servidor);
+            firewallAberta = true;
+            logEtapa('Conexao SSH estabelecida via WMI', 'sucesso');
+          } catch (e) {
+            logEtapa(`SSH falhou mesmo apos WMI: ${e.message}`, 'erro');
+            emit({ evento: 'resultado', ok: false, fase: 'ssh', pendencias: ['ssh'] });
+            servidores[idx].pendencias = ['ssh'];
+            salvarServidores(servidores);
+            res.end();
+            return;
+          }
+        } else {
+          logEtapa('WMI falhou — servidor inacessivel', 'erro');
+          emit({ evento: 'resultado', ok: false, fase: 'ssh', pendencias: ['ssh'] });
+          servidores[idx].pendencias = ['ssh'];
+          salvarServidores(servidores);
+          res.end();
+          return;
+        }
+      }
+    }
+
+    // 3. Instalar Agent (helper emite logs via callback)
+    emit({ evento: 'fase', fase: 'agent', descricao: 'Instalando Agent' });
+    try {
+      await instalarAgentNoServidor(ssh, servidor, servidores, idx, logEtapa);
+    } catch (err) {
+      logEtapa(`Falha ao instalar Agent: ${err.message}`, 'erro');
+      emit({ evento: 'resultado', ok: false, fase: 'agent', pendencias: ['agent'] });
+      servidores[idx].pendencias = ['agent'];
+      salvarServidores(servidores);
+      if (firewallAberta && ssh) await removerFirewallSSH(ssh, logEtapa);
+      if (ssh) ssh.dispose();
+      if (agentMudancas) await reverterDeployViaAgent(servidor, agentMudancas, logEtapa);
+      res.end();
+      return;
+    }
+    if (firewallAberta) await removerFirewallSSH(ssh, logEtapa);
+    ssh.dispose();
+    // Reverter preparacao temporaria do Agent (se houve)
+    if (agentMudancas) await reverterDeployViaAgent(servidor, agentMudancas, logEtapa);
+
+    // 4. Aguardar Agent ficar online
+    emit({ evento: 'fase', fase: 'verificacao', descricao: 'Verificando Agent' });
+    logEtapa('Aguardando Agent iniciar (3s)...', 'progresso');
+    await new Promise(r => setTimeout(r, 3000));
+
+    const servidoresAtual = lerServidores();
+    const servidorAtual = servidoresAtual[idx];
+
+    logEtapa('Verificando se Agent esta online...', 'progresso');
+    const status = await verificarAgent(servidorAtual);
+
+    if (!status.online) {
+      logEtapa('Agent instalado mas nao respondeu ao ping', 'erro');
+      emit({ evento: 'resultado', ok: false, fase: 'agent-offline', pendencias: ['agent-offline'] });
+      servidoresAtual[idx].pendencias = ['agent-offline'];
+      salvarServidores(servidoresAtual);
+      res.end();
+      return;
+    }
+    logEtapa(`Agent online (v${status.version || '?'})`, 'sucesso');
+
+    // 5. Diagnostico via Agent
+    emit({ evento: 'fase', fase: 'diagnostico', descricao: 'Executando diagnostico' });
+    logEtapa('Executando diagnostico completo via Agent...', 'progresso');
+    try {
+      const diag = await chamarAgent(servidorAtual, 'GET', '/diagnostico');
+
+      // Extrair pendencias (UAC e Firewall sao gerenciados temporariamente pelo Agent — nao sao pendencias)
+      const pendencias = [];
+      if (diag.uac) {
+        logEtapa(diag.uac.status === 'ok' ? 'UAC: liberado' : 'UAC: restrito (liberado temporariamente no deploy)', diag.uac.status === 'ok' ? 'sucesso' : 'info');
+      }
+      if (diag.openssh && diag.openssh.status !== 'ok') {
+        pendencias.push('openssh');
+        logEtapa(`OpenSSH: ${diag.openssh.instalado ? 'instalado mas servico ' + diag.openssh.servico : 'nao instalado'}`, 'erro');
+      } else if (diag.openssh) {
+        logEtapa('OpenSSH: OK', 'sucesso');
+      }
+      if (diag.firewall && diag.firewall.portas) {
+        const p22 = diag.firewall.portas[22] || diag.firewall.portas['22'];
+        logEtapa(p22 && p22.status !== 'ok' ? 'Firewall porta 22: fechada (aberta temporariamente no deploy)' : 'Firewall porta 22: aberta', p22 && p22.status !== 'ok' ? 'info' : 'sucesso');
+      }
+
+      // Salvar pendencias
+      servidoresAtual[idx].pendencias = pendencias;
+      salvarServidores(servidoresAtual);
+
+      if (pendencias.length === 0) {
+        logEtapa('Diagnostico concluido — nenhuma pendencia encontrada', 'sucesso');
+      } else {
+        logEtapa(`Diagnostico concluido — ${pendencias.length} pendencia(s): ${pendencias.join(', ')}`, 'info');
+      }
+
+      emit({ evento: 'resultado', ok: true, fase: 'concluido', diagnostico: diag, pendencias });
+    } catch (err) {
+      logEtapa(`Diagnostico falhou: ${err.message}`, 'erro');
+      emit({ evento: 'resultado', ok: false, fase: 'diagnostico', pendencias: ['diagnostico'] });
+      servidoresAtual[idx].pendencias = ['diagnostico'];
+      salvarServidores(servidoresAtual);
+    }
+    res.end();
+  })();
+});
+
+// ── Atualizar pendencias de um servidor ──
+app.put('/api/servidores/:id/pendencias', (req, res) => {
+  const servidores = lerServidores();
+  const idx = servidores.findIndex(s => s.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ erro: 'Servidor nao encontrado' });
+
+  servidores[idx].pendencias = req.body.pendencias || [];
   salvarServidores(servidores);
   res.json({ ok: true });
 });
@@ -1574,6 +2146,7 @@ async function executarDeploy(servidor, emit) {
   let ssh;
   let sucesso = false;
   let firewallAberta = false;
+  let agentMudancas = null; // rastreia o que o Agent preparou temporariamente
 
   function logMsg(msg, tipo = 'info') {
     const ts = new Date().toLocaleTimeString('pt-BR');
@@ -1581,6 +2154,15 @@ async function executarDeploy(servidor, emit) {
     log.push(entry);
     console.log(`[${servidor.nome}] [${tipo}] ${msg}`);
     if (emit) emit({ evento: 'log', ...entry });
+  }
+
+  // Validar Agent antes do deploy
+  const validacao = await validarAgentParaDeploy(servidor);
+  if (!validacao.ok) {
+    logMsg(`Deploy bloqueado: ${validacao.motivo}`, 'erro');
+    const entry = { servidor: servidor.nome, ip: servidor.ip, sucesso: false, duracao: '0s', data: new Date().toISOString(), log, bloqueadoPorAgent: true };
+    salvarDeployLog(entry);
+    return entry;
   }
 
   const REMOTE_GZ = REMOTE_EXE + '.gz';
@@ -1623,19 +2205,41 @@ async function executarDeploy(servidor, emit) {
 
     const compSize = fs.statSync(gzLocal).size;
 
-    // 2. Conectar (com fallback para instalar OpenSSH)
+    // 2. Conectar (com fallback Agent prepare → WMI)
     logMsg('Conectando via SSH...', 'progresso');
     try {
       ssh = await conectarSSH(servidor);
     } catch (sshErr) {
       logMsg(`Falha na conexao SSH: ${sshErr.message}`, 'erro');
-      const instalou = await instalarSSHRemoto(servidor, logMsg);
-      if (instalou) {
-        logMsg('Tentando conectar via SSH novamente...', 'progresso');
-        ssh = await conectarSSH(servidor);
-        firewallAberta = true;
+
+      // Camada 2: Preparar via Agent (temporario — sera revertido no finally)
+      const resultado = await prepararDeployViaAgent(servidor, logMsg);
+      agentMudancas = resultado.mudancas;
+      if (resultado.ok) {
+        try {
+          logMsg('Tentando conectar via SSH apos preparacao do Agent...', 'progresso');
+          ssh = await conectarSSH(servidor);
+        } catch (_) {
+          logMsg('SSH ainda falha apos Agent — tentando WMI...', 'progresso');
+          const instalou = await instalarSSHRemoto(servidor, logMsg);
+          if (instalou) {
+            logMsg('Tentando conectar via SSH novamente...', 'progresso');
+            ssh = await conectarSSH(servidor);
+            firewallAberta = true;
+          } else {
+            throw sshErr;
+          }
+        }
       } else {
-        throw sshErr;
+        // Camada 3: Fallback WMI
+        const instalou = await instalarSSHRemoto(servidor, logMsg);
+        if (instalou) {
+          logMsg('Tentando conectar via SSH novamente...', 'progresso');
+          ssh = await conectarSSH(servidor);
+          firewallAberta = true;
+        } else {
+          throw sshErr;
+        }
       }
     }
     logMsg('Conectado!', 'sucesso');
@@ -1779,6 +2383,8 @@ async function executarDeploy(servidor, emit) {
   } finally {
     if (firewallAberta && ssh) await removerFirewallSSH(ssh, logMsg);
     if (ssh) ssh.dispose();
+    // Reverter preparacao temporaria do Agent (UAC, firewall 22, sshd)
+    if (agentMudancas) await reverterDeployViaAgent(servidor, agentMudancas, logMsg);
     // Só apagar .gz temporario (nao apagar o cache de versoes)
     if (!usouCache && gzLocal) {
       try { if (fs.existsSync(gzLocal)) fs.unlinkSync(gzLocal); } catch (_) {}
@@ -1850,6 +2456,14 @@ app.get('/api/deploy/todos/stream', (req, res) => {
       if (versaoAtiva && s.versaoDeployada && s.versaoDeployada === versaoAtiva) {
         emit(s.id, { evento: 'deploy_pulado', versao: versaoAtiva });
         resultados.push({ servidorId: s.id, sucesso: true, pulado: true });
+        continue;
+      }
+
+      // Validar Agent antes do deploy
+      const validacao = await validarAgentParaDeploy(s);
+      if (!validacao.ok) {
+        emit(s.id, { evento: 'deploy_bloqueado_agent', motivo: validacao.motivo, codigo: validacao.codigo });
+        resultados.push({ servidorId: s.id, sucesso: false, bloqueadoPorAgent: true, motivo: validacao.motivo });
         continue;
       }
 
@@ -1925,6 +2539,598 @@ app.post('/api/deploy/:id', async (req, res) => {
 // ── Histórico ──
 app.get('/api/historico', (req, res) => {
   res.json(lerDeployLog());
+});
+
+// ══════════════════════════════════════════
+// ROTAS — AGENT
+// ══════════════════════════════════════════
+
+// ── Status de todos os agents (deve vir ANTES de :id) ──
+app.get('/api/agent/status/todos', async (req, res) => {
+  const servidores = lerServidores();
+  const resultados = {};
+  const promises = servidores.map(async (s) => {
+    const temAgent = !!s.agentToken;
+    if (temAgent) {
+      const status = await verificarAgent(s);
+      const versaoRemota = status.version || s.agentVersao || '0.0.0';
+      resultados[s.id] = { ...status, temAgent: true, versaoAgent: s.agentVersao || null, versaoEsperada: AGENT_EXPECTED_VERSION, desatualizado: status.online && versaoRemota !== AGENT_EXPECTED_VERSION };
+    } else {
+      resultados[s.id] = { online: false, temAgent: false, versaoEsperada: AGENT_EXPECTED_VERSION, desatualizado: false };
+    }
+  });
+  await Promise.all(promises);
+  res.json(resultados);
+});
+
+// ── Status do agent em um servidor ──
+app.get('/api/agent/:id/status', async (req, res) => {
+  const servidores = lerServidores();
+  const servidor = servidores.find(s => s.id === req.params.id);
+  if (!servidor) return res.status(404).json({ erro: 'Servidor nao encontrado' });
+  const status = await verificarAgent(servidor);
+  const versaoRemota = status.version || servidor.agentVersao || '0.0.0';
+  res.json({ ...status, temAgent: !!servidor.agentToken, versaoAgent: servidor.agentVersao || null, versaoEsperada: AGENT_EXPECTED_VERSION, desatualizado: status.online && versaoRemota !== AGENT_EXPECTED_VERSION });
+});
+
+// ── Diagnostico completo via agent ──
+app.get('/api/agent/:id/diagnostico', async (req, res) => {
+  const servidores = lerServidores();
+  const servidor = servidores.find(s => s.id === req.params.id);
+  if (!servidor) return res.status(404).json({ erro: 'Servidor nao encontrado' });
+
+  try {
+    const diag = await chamarAgent(servidor, 'GET', '/diagnostico');
+    res.json(diag);
+  } catch (err) {
+    res.json({ status: 'offline', erro: err.message });
+  }
+});
+
+// ── Instalar/corrigir psql com log em tempo real (SSE) ──
+app.get('/api/agent/:id/fix/psql/stream', (req, res) => {
+  req.setTimeout(3 * 60 * 1000);
+  res.setTimeout(3 * 60 * 1000);
+  res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });
+
+  function emit(msg, tipo) {
+    try { res.write(`data: ${JSON.stringify({ evento: 'log', msg, tipo: tipo || 'info' })}\n\n`); } catch (_) {}
+  }
+  function emitFim(ok, descricao) {
+    try { res.write(`data: ${JSON.stringify({ evento: 'concluido', ok, descricao })}\n\n`); } catch (_) {}
+    res.end();
+  }
+
+  const servidores = lerServidores();
+  const servidor = servidores.find(s => s.id === req.params.id);
+  if (!servidor) { emitFim(false, 'Servidor nao encontrado'); return; }
+
+  (async () => {
+    try {
+      const result = await instalarPsqlRemoto(servidor, emit);
+      if (result.ok) {
+        emitFim(true, result.descricao || 'psql instalado');
+      } else {
+        emitFim(false, result.erro || 'Falha na instalacao');
+      }
+    } catch (err) {
+      emit(`Erro: ${err.message}`, 'erro');
+      emitFim(false, err.message);
+    }
+  })();
+
+  req.on('close', () => {});
+});
+
+// ── Executar correcao via agent ──
+app.post('/api/agent/:id/fix/:tipo', async (req, res) => {
+  const servidores = lerServidores();
+  const servidor = servidores.find(s => s.id === req.params.id);
+  if (!servidor) return res.status(404).json({ erro: 'Servidor nao encontrado' });
+
+  const tipo = req.params.tipo;
+  const body = req.body || {};
+
+  try {
+    let result;
+    switch (tipo) {
+      case 'uac':
+        result = await chamarAgent(servidor, 'POST', '/fix/uac');
+        break;
+      case 'firewall':
+        result = await chamarAgent(servidor, 'POST', '/fix/firewall', { porta: body.porta || 22, nome: body.nome || 'OpenSSH Server (sshd)' });
+        break;
+      case 'firewall-remover':
+        result = await chamarAgent(servidor, 'POST', '/fix/firewall/remover', { nome: body.nome });
+        break;
+      case 'openssh':
+        result = await chamarAgent(servidor, 'POST', '/fix/openssh/instalar');
+        break;
+      case 'servico-iniciar':
+        result = await chamarAgent(servidor, 'POST', '/fix/servico/iniciar', { nome: body.nome });
+        break;
+      case 'servico-parar':
+        result = await chamarAgent(servidor, 'POST', '/fix/servico/parar', { nome: body.nome });
+        break;
+      case 'servico-auto':
+        result = await chamarAgent(servidor, 'POST', '/fix/servico/auto', { nome: body.nome });
+        break;
+      case 'psql':
+        result = await instalarPsqlRemoto(servidor);
+        break;
+      case 'tudo':
+        result = await tentarCorrigirTudoViaAgent(servidor);
+        break;
+      default:
+        return res.status(400).json({ erro: `Tipo de correcao desconhecido: ${tipo}` });
+    }
+    res.json(result);
+  } catch (err) {
+    res.json({ ok: false, erro: err.message });
+  }
+});
+
+async function instalarPsqlRemoto(servidor, emit) {
+  const log = emit || (() => {});
+  let ssh;
+  try {
+    // 1. Criar ZIP se cache nao existe
+    log('Preparando pacote psql...', 'progresso');
+    const zipPath = await criarZipPsql();
+    const zipSize = fs.statSync(zipPath).size;
+    log(`Pacote pronto (${(zipSize / 1024 / 1024).toFixed(1)} MB)`, 'sucesso');
+
+    // 2. Conectar SSH
+    log(`Conectando via SSH em ${servidor.ip}...`, 'progresso');
+    ssh = await conectarSSH(servidor);
+    log('Conectado', 'sucesso');
+
+    // 3. Criar diretorio remoto
+    await ssh.execCommand(`mkdir "${PSQL_REMOTE_DIR}" 2>nul`);
+
+    // 4. Upload ZIP via SFTP
+    const remoteZip = `${PSQL_REMOTE_DIR}\\psql_client.zip`;
+    log(`Enviando psql_client.zip via SFTP...`, 'progresso');
+    await ssh.putFile(zipPath, remoteZip);
+    log('ZIP enviado', 'sucesso');
+
+    // 5. Extrair via PowerShell (com overwrite)
+    log('Extraindo no servidor...', 'progresso');
+    const extractCmd = `powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('${remoteZip}', '${PSQL_REMOTE_DIR}', $true)"`;
+    // $true para overwrite requer .NET 4.7.2+ — usar fallback se falhar
+    let extractResult = await ssh.execCommand(extractCmd);
+    if (extractResult.code !== 0) {
+      // Fallback: remover arquivos antigos e extrair sem overwrite
+      log('Tentando extracao alternativa...', 'progresso');
+      const fallbackCmd = `powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip = [System.IO.Compression.ZipFile]::OpenRead('${remoteZip}'); foreach ($e in $zip.Entries) { $dest = Join-Path '${PSQL_REMOTE_DIR}' $e.Name; if ($e.Name) { [System.IO.Compression.ZipFileExtensions]::ExtractToFile($e, $dest, $true) } }; $zip.Dispose()"`;
+      extractResult = await ssh.execCommand(fallbackCmd);
+      if (extractResult.code !== 0) {
+        throw new Error('Falha ao extrair ZIP: ' + (extractResult.stderr || extractResult.stdout));
+      }
+    }
+    log('Arquivos extraidos', 'sucesso');
+
+    // 6. Limpar ZIP remoto
+    await ssh.execCommand(`del "${remoteZip}" 2>nul`);
+
+    // 7. Adicionar ao PATH do sistema
+    // Primeiro verificar se ja esta no PATH
+    log('Verificando PATH do sistema...', 'progresso');
+    const pathCheck = await ssh.execCommand(`reg query "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment" /v Path`);
+    const currentPath = (pathCheck.stdout || '').replace(/\r/g, '');
+    const pathNorm = PSQL_REMOTE_DIR.toLowerCase();
+
+    if (!currentPath.toLowerCase().includes(pathNorm)) {
+      log(`Adicionando ${PSQL_REMOTE_DIR} ao PATH...`, 'progresso');
+      // Tentar via agent se disponivel (roda como SYSTEM, mais confiavel)
+      let pathAdded = false;
+      try {
+        const agentStatus = await verificarAgent(servidor);
+        if (agentStatus.online) {
+          const agentResult = await chamarAgent(servidor, 'POST', '/fix/psql/path', { caminho: PSQL_REMOTE_DIR });
+          pathAdded = agentResult.ok;
+          if (pathAdded) log('PATH atualizado via Agent', 'sucesso');
+        }
+      } catch (_) {}
+
+      if (!pathAdded) {
+        // Fallback: adicionar via reg add pelo SSH
+        // Extrair valor atual do PATH
+        const pathMatch = currentPath.match(/Path\s+REG_(?:EXPAND_)?SZ\s+(.+)/i);
+        if (pathMatch) {
+          let pathValue = pathMatch[1].trim();
+          if (!pathValue.endsWith(';')) pathValue += ';';
+          pathValue += PSQL_REMOTE_DIR;
+          const regCmd = `reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment" /v Path /t REG_EXPAND_SZ /d "${pathValue}" /f`;
+          const regResult = await ssh.execCommand(regCmd);
+          if (regResult.code !== 0) {
+            log(`Aviso: nao foi possivel adicionar ao PATH: ${regResult.stderr}`, 'erro');
+            // Nao e erro fatal — psql pode ser usado com caminho completo
+          } else {
+            log('PATH atualizado via registro', 'sucesso');
+          }
+        }
+      }
+
+      // Broadcast WM_SETTINGCHANGE para processos pegarem o novo PATH
+      await ssh.execCommand(`powershell -NoProfile -Command "[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path', 'Machine'), 'Machine')"`);
+    } else {
+      log('PATH ja contem psql', 'sucesso');
+    }
+
+    // 8. Validar instalacao (usar caminho completo pois PATH pode nao ter propagado)
+    log('Validando instalacao...', 'progresso');
+    const validateResult = await ssh.execCommand(`"${PSQL_REMOTE_DIR}\\psql.exe" --version 2>&1`);
+    const versao = (validateResult.stdout || '').trim();
+
+    // 9. Reiniciar Agent via NSSM para que pegue o novo PATH
+    log('Reiniciando Agent para aplicar novo PATH...', 'progresso');
+    await ssh.execCommand(`"${AGENT_REMOTE_DIR}\\nssm.exe" restart ${AGENT_SERVICE_NAME}`);
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      const agentSt = await verificarAgent(servidor);
+      if (agentSt.online) log('Agent reiniciado', 'sucesso');
+      else log('Agent nao respondeu apos reinicio', 'erro');
+    } catch (_) {
+      log('Nao foi possivel verificar Agent apos reinicio', 'erro');
+    }
+
+    ssh.dispose();
+
+    if (versao && versao.includes('psql')) {
+      log(`psql instalado: ${versao}`, 'sucesso');
+      return { ok: true, versao, descricao: `psql instalado em ${PSQL_REMOTE_DIR}: ${versao}` };
+    }
+
+    log(`Arquivos copiados para ${PSQL_REMOTE_DIR} (validacao pendente)`, 'sucesso');
+    return { ok: true, descricao: `Arquivos copiados para ${PSQL_REMOTE_DIR} (validacao pendente)` };
+  } catch (err) {
+    if (ssh) ssh.dispose();
+    log(`Erro: ${err.message}`, 'erro');
+    return { ok: false, erro: err.message };
+  }
+}
+
+async function tentarCorrigirTudoViaAgent(servidor) {
+  const resultados = [];
+  try {
+    const diag = await chamarAgent(servidor, 'GET', '/diagnostico');
+    if (diag.status === 'ok') return { ok: true, descricao: 'Nenhum problema encontrado', resultados: [] };
+
+    if (diag.uac && diag.uac.status !== 'ok') {
+      const r = await chamarAgent(servidor, 'POST', '/fix/uac');
+      resultados.push({ tipo: 'UAC', ...r });
+    }
+    if (diag.openssh && !diag.openssh.instalado) {
+      const r = await chamarAgent(servidor, 'POST', '/fix/openssh/instalar');
+      resultados.push({ tipo: 'OpenSSH Instalar', ...r });
+    } else if (diag.openssh && diag.openssh.servico !== 'running') {
+      const r = await chamarAgent(servidor, 'POST', '/fix/servico/iniciar', { nome: 'sshd' });
+      resultados.push({ tipo: 'OpenSSH Iniciar', ...r });
+    }
+    if (diag.firewall && diag.firewall.portas && diag.firewall.portas[22] && diag.firewall.portas[22].status !== 'ok') {
+      const r = await chamarAgent(servidor, 'POST', '/fix/firewall', { porta: 22, nome: 'OpenSSH Server (sshd)' });
+      resultados.push({ tipo: 'Firewall SSH', ...r });
+    }
+
+    return { ok: true, descricao: `${resultados.length} correcoes aplicadas`, resultados };
+  } catch (err) {
+    return { ok: false, erro: err.message, resultados };
+  }
+}
+
+// ── Helper: instalar agent em servidor via SSH ──
+async function instalarAgentNoServidor(ssh, servidor, servidores, idx, log) {
+  const l = log || (() => {});
+  const nssm = `"${AGENT_REMOTE_DIR}\\nssm.exe"`;
+
+  // 1. Criar diretorio
+  l('Criando diretorio remoto...', 'progresso');
+  await ssh.execCommand(`mkdir "${AGENT_REMOTE_DIR}" 2>nul`);
+
+  // 2. Parar e remover servico antigo (se existir)
+  l('Removendo servico antigo (se existir)...', 'progresso');
+  await ssh.execCommand(`${nssm} stop ${AGENT_SERVICE_NAME} 2>nul`);
+  await ssh.execCommand(`${nssm} remove ${AGENT_SERVICE_NAME} confirm 2>nul`);
+  await ssh.execCommand(`schtasks /delete /tn "FDeploy Agent" /f 2>nul`);
+  await ssh.execCommand(`taskkill /f /im fdeploy-agent.exe 2>nul`);
+
+  // 3. Gerar token
+  const token = crypto.randomBytes(32).toString('hex');
+
+  // 4. Upload config.json
+  l('Enviando config.json...', 'progresso');
+  const configJson = JSON.stringify({ port: servidor.agentPort || AGENT_DEFAULT_PORT, token }, null, 2);
+  const configTmp = path.join(UPLOADS_DIR, `_agent_config_${Date.now()}.json`);
+  fs.writeFileSync(configTmp, configJson, 'utf8');
+  await ssh.putFile(configTmp, `${AGENT_REMOTE_DIR}\\config.json`);
+  try { fs.unlinkSync(configTmp); } catch (_) {}
+
+  // 5. Upload agent.exe (compactado) + nssm.exe
+  l('Compactando fdeploy-agent.exe...', 'progresso');
+  const agentGzLocal = path.join(UPLOADS_DIR, '_agent_install.gz');
+  const agentGzRemote = `${AGENT_REMOTE_DIR}\\fdeploy-agent.exe.gz`;
+  const agentExeRemote = `${AGENT_REMOTE_DIR}\\fdeploy-agent.exe`;
+  const { compSize: agentCompSize } = await compactarArquivo(AGENT_EXE_PATH, agentGzLocal);
+  l(`Enviando fdeploy-agent.exe.gz (${(agentCompSize / 1024 / 1024).toFixed(1)} MB) via SFTP...`, 'progresso');
+  await ssh.putFile(agentGzLocal, agentGzRemote);
+  try { fs.unlinkSync(agentGzLocal); } catch (_) {}
+  l('Descompactando no servidor...', 'progresso');
+  const decRes = await ssh.execCommand(PS_DECOMPRESS(agentGzRemote, agentExeRemote));
+  if (decRes.stderr && !decRes.stdout.includes('OK')) {
+    throw new Error(`Falha ao descompactar agent: ${decRes.stderr}`);
+  }
+  await ssh.execCommand(`del "${agentGzRemote}" 2>nul`);
+  l('Enviando nssm.exe...', 'progresso');
+  await ssh.putFile(AGENT_NSSM_PATH, `${AGENT_REMOTE_DIR}\\nssm.exe`);
+
+  // 6. Instalar servico via NSSM
+  l('Instalando servico via NSSM...', 'progresso');
+  await ssh.execCommand(`${nssm} install ${AGENT_SERVICE_NAME} "${AGENT_REMOTE_DIR}\\fdeploy-agent.exe"`);
+  await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} DisplayName "FDeploy Agent"`);
+  await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} Description "FDeploy Agent - API de diagnostico e correcao remota"`);
+  await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} AppDirectory "${AGENT_REMOTE_DIR}"`);
+  await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} Start SERVICE_AUTO_START`);
+  await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} AppExit Default Restart`);
+  await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} AppRestartDelay 5000`);
+
+  // 7. Abrir firewall
+  const porta = servidor.agentPort || AGENT_DEFAULT_PORT;
+  l(`Abrindo firewall porta ${porta}...`, 'progresso');
+  await ssh.execCommand(`netsh advfirewall firewall delete rule name="FDeploy Agent" 2>nul`);
+  await ssh.execCommand(`netsh advfirewall firewall add rule name="FDeploy Agent" dir=in action=allow protocol=TCP localport=${porta}`);
+
+  // 8. Iniciar servico
+  l('Iniciando servico FDeployAgent...', 'progresso');
+  await ssh.execCommand(`${nssm} start ${AGENT_SERVICE_NAME}`);
+
+  // 9. Salvar token encriptado
+  servidores[idx].agentToken = encrypt(token);
+  servidores[idx].agentPort = porta;
+  servidores[idx].agentVersao = AGENT_EXPECTED_VERSION;
+  salvarServidores(servidores);
+
+  l('Agent instalado com sucesso', 'sucesso');
+  return { token, porta };
+}
+
+// ── Instalar agent via SSH ──
+app.post('/api/agent/:id/instalar', async (req, res) => {
+  const servidores = lerServidores();
+  const idx = servidores.findIndex(s => s.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ erro: 'Servidor nao encontrado' });
+  const servidor = servidores[idx];
+
+  if (!fs.existsSync(AGENT_EXE_PATH)) {
+    return res.status(400).json({ erro: 'fdeploy-agent.exe nao encontrado em dist/. Execute o build primeiro.' });
+  }
+
+  let ssh;
+  let firewallAberta = false;
+  try {
+    try {
+      ssh = await conectarSSH(servidor);
+    } catch (sshErr) {
+      const instalou = await instalarSSHRemoto(servidor, () => {});
+      if (instalou) {
+        ssh = await conectarSSH(servidor);
+        firewallAberta = true;
+      } else {
+        throw sshErr;
+      }
+    }
+    await instalarAgentNoServidor(ssh, servidor, servidores, idx);
+    if (firewallAberta) await removerFirewallSSH(ssh, () => {});
+    ssh.dispose();
+
+    // Aguardar agent iniciar e verificar
+    await new Promise(r => setTimeout(r, 3000));
+    const status = await verificarAgent(servidores[idx]);
+
+    res.json({ ok: true, online: status.online, descricao: 'Agent instalado como servico' });
+  } catch (err) {
+    if (firewallAberta && ssh) {
+      try { await removerFirewallSSH(ssh, () => {}); } catch (_) {}
+    }
+    if (ssh) ssh.dispose();
+    res.json({ ok: false, erro: err.message });
+  }
+});
+
+// ── Atualizar agent ──
+app.get('/api/agent/:id/atualizar/stream', (req, res) => {
+  req.setTimeout(5 * 60 * 1000);
+  res.setTimeout(5 * 60 * 1000);
+  res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });
+
+  function emit(msg, tipo) {
+    try { res.write(`data: ${JSON.stringify({ evento: 'log', msg, tipo: tipo || 'info' })}\n\n`); } catch (_) {}
+  }
+  function emitFim(ok, descricao) {
+    try { res.write(`data: ${JSON.stringify({ evento: 'concluido', ok, descricao })}\n\n`); } catch (_) {}
+    res.end();
+  }
+
+  const servidores = lerServidores();
+  const idx = servidores.findIndex(s => s.id === req.params.id);
+  if (idx === -1) { emitFim(false, 'Servidor nao encontrado'); return; }
+  const servidor = servidores[idx];
+
+  if (!fs.existsSync(AGENT_EXE_PATH)) { emitFim(false, 'fdeploy-agent.exe nao encontrado em dist/'); return; }
+
+  (async () => {
+    let ssh;
+    let firewallAberta = false;
+    try {
+      const nssm = `"${AGENT_REMOTE_DIR}\\nssm.exe"`;
+      emit(`Conectando via SSH em ${servidor.ip}...`, 'progresso');
+      try {
+        ssh = await conectarSSH(servidor);
+      } catch (sshErr) {
+        emit(`Falha na conexao SSH: ${sshErr.message}`, 'erro');
+        emit('Tentando instalar OpenSSH via WMI/DCOM...', 'progresso');
+        const instalou = await instalarSSHRemoto(servidor, emit);
+        if (instalou) {
+          emit('Tentando conectar via SSH novamente...', 'progresso');
+          ssh = await conectarSSH(servidor);
+          firewallAberta = true;
+        } else {
+          throw sshErr;
+        }
+      }
+      emit('Conectado', 'sucesso');
+
+      // 1. Parar servico
+      emit('Parando servico FDeployAgent...', 'progresso');
+      await ssh.execCommand(`${nssm} stop ${AGENT_SERVICE_NAME}`);
+      await ssh.execCommand(`taskkill /f /im fdeploy-agent.exe 2>nul`);
+      await new Promise(r => setTimeout(r, 2000));
+      emit('Servico parado', 'sucesso');
+
+      // 2. Compactar e enviar novo binario via SFTP
+      emit('Compactando binario...', 'progresso');
+      const tempGz = path.join(UPLOADS_DIR, '_agent_update.gz');
+      const remoteGz = `${AGENT_REMOTE_DIR}\\fdeploy-agent.exe.gz`;
+      const remoteExe = `${AGENT_REMOTE_DIR}\\fdeploy-agent.exe`;
+      const { compSize } = await compactarArquivo(AGENT_EXE_PATH, tempGz);
+      emit(`Enviando binario compactado (${(compSize / 1024 / 1024).toFixed(1)} MB)...`, 'progresso');
+      await ssh.putFile(tempGz, remoteGz);
+      try { fs.unlinkSync(tempGz); } catch (_) {}
+      emit('Descompactando no servidor...', 'progresso');
+      const decResult = await ssh.execCommand(PS_DECOMPRESS(remoteGz, remoteExe));
+      if (decResult.stderr && !decResult.stdout.includes('OK')) {
+        throw new Error(`Falha ao descompactar: ${decResult.stderr}`);
+      }
+      await ssh.execCommand(`del "${remoteGz}" 2>nul`);
+      emit('Binario enviado e descompactado', 'sucesso');
+
+      // 3. Iniciar servico
+      emit('Iniciando servico FDeployAgent...', 'progresso');
+      let startResult = await ssh.execCommand(`${nssm} start ${AGENT_SERVICE_NAME}`);
+      if (startResult.stderr && startResult.stderr.includes('PAUSED')) {
+        emit('Servico em PAUSED — reinstalando via NSSM...', 'progresso');
+        await ssh.execCommand(`${nssm} remove ${AGENT_SERVICE_NAME} confirm`);
+        await new Promise(r => setTimeout(r, 1000));
+        await ssh.execCommand(`${nssm} install ${AGENT_SERVICE_NAME} "${AGENT_REMOTE_DIR}\\fdeploy-agent.exe"`);
+        await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} DisplayName "FDeploy Agent"`);
+        await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} AppDirectory "${AGENT_REMOTE_DIR}"`);
+        await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} Start SERVICE_AUTO_START`);
+        await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} AppExit Default Restart`);
+        await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} AppRestartDelay 5000`);
+        await ssh.execCommand(`${nssm} start ${AGENT_SERVICE_NAME}`);
+        emit('Servico reinstalado e iniciado', 'sucesso');
+      } else {
+        emit('Servico iniciado', 'sucesso');
+      }
+      if (firewallAberta) await removerFirewallSSH(ssh, emit);
+      ssh.dispose();
+
+      // 4. Verificar se voltou online
+      emit('Aguardando Agent ficar online...', 'progresso');
+      await new Promise(r => setTimeout(r, 3000));
+      const status = await verificarAgent(servidor);
+
+      if (status.online) {
+        servidores[idx].agentVersao = status.version || AGENT_EXPECTED_VERSION;
+        salvarServidores(servidores);
+        emit(`Agent online — v${status.version || AGENT_EXPECTED_VERSION}`, 'sucesso');
+        emitFim(true, 'Agent atualizado e online');
+      } else {
+        emit('Agent nao respondeu ao ping', 'erro');
+        emitFim(false, 'Agent atualizado mas offline — pode precisar reiniciar manualmente');
+      }
+    } catch (err) {
+      if (firewallAberta && ssh) {
+        try { await removerFirewallSSH(ssh, emit); } catch (_) {}
+      }
+      if (ssh) ssh.dispose();
+      emit(`Erro: ${err.message}`, 'erro');
+      emitFim(false, err.message);
+    }
+  })();
+
+  req.on('close', () => {});
+});
+
+// ── Log do agent ──
+app.get('/api/agent/:id/log', async (req, res) => {
+  const servidores = lerServidores();
+  const servidor = servidores.find(s => s.id === req.params.id);
+  if (!servidor) return res.status(404).json({ erro: 'Servidor nao encontrado' });
+
+  try {
+    const lines = req.query.lines || 50;
+    const result = await chamarAgent(servidor, 'GET', `/log?lines=${lines}`);
+    res.json(result);
+  } catch (err) {
+    res.json({ erro: err.message });
+  }
+});
+
+// ── Gerar script de instalacao manual ──
+app.post('/api/agent/gerar-script/:id', (req, res) => {
+  const servidores = lerServidores();
+  const idx = servidores.findIndex(s => s.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ erro: 'Servidor nao encontrado' });
+  const servidor = servidores[idx];
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const porta = servidor.agentPort || AGENT_DEFAULT_PORT;
+
+  // Salvar token
+  servidores[idx].agentToken = encrypt(token);
+  servidores[idx].agentPort = porta;
+  salvarServidores(servidores);
+
+  const script = `@echo off
+echo === FDeploy Agent - Instalacao Manual ===
+echo.
+
+set AGENT_DIR=${AGENT_REMOTE_DIR}
+set AGENT_PORT=${porta}
+set AGENT_TOKEN=${token}
+set NSSM=%AGENT_DIR%\\nssm.exe
+set SVC=${AGENT_SERVICE_NAME}
+
+:: Criar diretorio
+if not exist "%AGENT_DIR%" mkdir "%AGENT_DIR%"
+
+:: Copiar arquivos (devem estar na mesma pasta deste .bat)
+copy /Y "%~dp0fdeploy-agent.exe" "%AGENT_DIR%\\fdeploy-agent.exe"
+copy /Y "%~dp0nssm.exe" "%AGENT_DIR%\\nssm.exe"
+
+:: Criar config.json
+echo {"port":%AGENT_PORT%,"token":"%AGENT_TOKEN%"} > "%AGENT_DIR%\\config.json"
+
+:: Remover servico/tarefa antiga
+"%NSSM%" stop %SVC% 2>nul
+"%NSSM%" remove %SVC% confirm 2>nul
+schtasks /delete /tn "FDeploy Agent" /f 2>nul
+taskkill /f /im fdeploy-agent.exe 2>nul
+
+:: Instalar servico via NSSM
+"%NSSM%" install %SVC% "%AGENT_DIR%\\fdeploy-agent.exe"
+"%NSSM%" set %SVC% DisplayName "FDeploy Agent"
+"%NSSM%" set %SVC% Description "FDeploy Agent - API de diagnostico e correcao remota"
+"%NSSM%" set %SVC% AppDirectory "%AGENT_DIR%"
+"%NSSM%" set %SVC% Start SERVICE_AUTO_START
+"%NSSM%" set %SVC% AppExit Default Restart
+"%NSSM%" set %SVC% AppRestartDelay 5000
+
+:: Abrir firewall
+netsh advfirewall firewall delete rule name="FDeploy Agent" 2>nul
+netsh advfirewall firewall add rule name="FDeploy Agent" dir=in action=allow protocol=TCP localport=%AGENT_PORT%
+
+:: Iniciar servico
+"%NSSM%" start %SVC%
+
+echo.
+echo Agent instalado como servico na porta %AGENT_PORT%.
+echo Token: %AGENT_TOKEN%
+pause
+`;
+
+  res.json({ ok: true, script, token });
 });
 
 // ══════════════════════════════════════════
@@ -2159,6 +3365,21 @@ app.get('/api/geral/deploy/todos/stream', (req, res) => {
         continue;
       }
 
+      // Validar Agent de TODOS os membros antes de iniciar (replicacao requer todos)
+      const validacoes = await Promise.all(membros.map(async s => ({ id: s.id, nome: s.nome, validacao: await validarAgentParaDeploy(s) })));
+      const membroComProblema = validacoes.find(v => !v.validacao.ok);
+      if (membroComProblema) {
+        // Bloquear grupo inteiro se algum membro falhar
+        for (const s of membros) {
+          if (!deployedIds.has(s.id)) {
+            deployedIds.add(s.id);
+            emit(s.id, { evento: 'deploy_bloqueado_agent', motivo: `Grupo bloqueado: ${membroComProblema.nome} — ${membroComProblema.validacao.motivo}`, codigo: membroComProblema.validacao.codigo });
+            resultados.push({ servidorId: s.id, sucesso: false, bloqueadoPorAgent: true, motivo: membroComProblema.validacao.motivo });
+          }
+        }
+        continue;
+      }
+
       // Deploy sequencial de todos os membros do grupo
       for (const s of membros) {
         if (deployedIds.has(s.id)) continue;
@@ -2185,6 +3406,14 @@ app.get('/api/geral/deploy/todos/stream', (req, res) => {
       if (versaoAtiva && s.versaoGeralDeployada && s.versaoGeralDeployada === versaoAtiva) {
         emit(s.id, { evento: 'deploy_pulado', versao: versaoAtiva });
         resultados.push({ servidorId: s.id, sucesso: true, pulado: true });
+        continue;
+      }
+
+      // Validar Agent antes do deploy
+      const validacao = await validarAgentParaDeploy(s);
+      if (!validacao.ok) {
+        emit(s.id, { evento: 'deploy_bloqueado_agent', motivo: validacao.motivo, codigo: validacao.codigo });
+        resultados.push({ servidorId: s.id, sucesso: false, bloqueadoPorAgent: true, motivo: validacao.motivo });
         continue;
       }
 
@@ -2264,13 +3493,16 @@ app.get('/api/geral/verificar-replicacao/:id', async (req, res) => {
   let ssh;
   try {
     ssh = await conectarSSH(servidor);
+    const psqlBin = await resolverPsqlRemoto(ssh);
+    if (!psqlBin) { ssh.dispose(); return res.json({ temReplicacao: false }); }
+
     const pgPass = decrypt(servidor.pgSenha);
     const pgUser = servidor.pgUsuario || 'frigo';
     const pgDb = servidor.pgBanco;
     const pgPort = servidor.pgPorta || 5432;
     const pgHost = servidor.pgHost || '127.0.0.1';
 
-    const cmd = `set "PGPASSWORD=${pgPass}"&& psql -U ${pgUser} -d ${pgDb} -p ${pgPort} -h ${pgHost} -t -A -c "SELECT replica FROM replicacao.servidor" 2>&1`;
+    const cmd = `set "PGPASSWORD=${pgPass}"&& ${psqlBin} -U ${pgUser} -d ${pgDb} -p ${pgPort} -h ${pgHost} -t -A -c "SELECT replica FROM replicacao.servidor" 2>&1`;
     const result = await ssh.execCommand(cmd);
     ssh.dispose();
 
@@ -2363,6 +3595,8 @@ app.get('/api/geral/scripts/versao/:id', async (req, res) => {
   let ssh;
   try {
     ssh = await conectarSSH(servidor);
+    const psqlBin = await resolverPsqlRemoto(ssh);
+    if (!psqlBin) { ssh.dispose(); return res.json({ versaoBD: null, erro: 'psql nao encontrado no servidor' }); }
 
     const pgPass = decrypt(servidor.pgSenha);
     const pgUser = servidor.pgUsuario || 'frigo';
@@ -2370,7 +3604,7 @@ app.get('/api/geral/scripts/versao/:id', async (req, res) => {
     const pgPort = servidor.pgPorta || 5432;
     const pgHost = servidor.pgHost || '127.0.0.1';
 
-    const cmd = `set "PGPASSWORD=${pgPass}"&& psql -U ${pgUser} -d ${pgDb} -p ${pgPort} -h ${pgHost} -t -A -c "SELECT versao_bd FROM re.servidor"`;
+    const cmd = `set "PGPASSWORD=${pgPass}"&& ${psqlBin} -U ${pgUser} -d ${pgDb} -p ${pgPort} -h ${pgHost} -t -A -c "SELECT versao_bd FROM re.servidor"`;
     const result = await ssh.execCommand(cmd);
 
     const versaoBD = parseInt((result.stdout || '').trim());
