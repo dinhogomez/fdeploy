@@ -8,97 +8,293 @@
 </head>
 <body>
 
-<div class="header">
-  <h1><span>F</span>Deploy</h1>
-  <span id="exeBadge" class="badge badge-no">Nenhum .exe</span>
+<!-- ═══════════ TELA OPERADOR ═══════════ -->
+<div id="operadorScreen">
+  <div class="header">
+    <h1><span>F</span>Deploy</h1>
+    <span class="header-version">v1.0</span>
+  </div>
+  <div class="home-center">
+    <div class="home-hero">
+      <p class="home-tagline">Quem esta operando?</p>
+    </div>
+    <div class="operador-form">
+      <div class="form-group">
+        <input type="text" id="inputOperador" placeholder="Digite seu nome" autocomplete="off" onkeydown="if(event.key==='Enter')confirmarOperador()">
+      </div>
+      <button class="btn btn-primary" onclick="confirmarOperador()" style="width:100%;padding:10px;font-size:15px;">Entrar</button>
+    </div>
+  </div>
 </div>
 
-<div class="container">
-
-  <!-- Upload -->
-  <div class="section">
-    <div class="section-title">Arquivo para Deploy</div>
-    <div class="drop-zone" id="dropZone">
-      <p>Arraste o <strong>Fvendas2.0.exe</strong> aqui</p>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fileInput').click()">Selecionar arquivo</button>
-      <input type="file" id="fileInput" accept=".exe" style="display:none">
+<!-- ═══════════ TELA INICIAL ═══════════ -->
+<div id="homeScreen" style="display:none">
+  <div class="header">
+    <h1><span>F</span>Deploy</h1>
+    <span class="header-version">v1.0</span>
+  </div>
+  <div class="home-center">
+    <div class="home-hero">
+      <p class="home-tagline">Selecione o modulo de atualizacao</p>
     </div>
-    <div class="upload-confirm" id="uploadConfirm" style="display:none">
-      <div class="upload-confirm-file" id="uploadFileName"></div>
-      <div class="upload-confirm-row">
-        <label for="inputVersao">Versao:</label>
-        <input type="text" id="inputVersao" placeholder="Ex: 1.2.0">
-        <button class="btn btn-primary btn-sm" onclick="confirmarUpload()">Enviar</button>
-        <button class="btn btn-ghost btn-sm" onclick="cancelarUpload()">Cancelar</button>
+    <div class="home-buttons">
+      <button class="home-btn home-btn-fvendas" onclick="navegarPara('fvendas')">
+        <div class="home-btn-icon home-btn-icon-fvendas">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+            <line x1="12" y1="18" x2="12.01" y2="18"/>
+          </svg>
+        </div>
+        <div class="home-btn-content">
+          <span class="home-btn-title">Atualizacao Backend Fvendas</span>
+          <span class="home-btn-desc">Deploy do Fvendas2.0.exe nos servidores</span>
+        </div>
+        <svg class="home-btn-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <button class="home-btn home-btn-geral" onclick="navegarPara('geral')">
+        <div class="home-btn-icon home-btn-icon-geral">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+            <line x1="6" y1="6" x2="6.01" y2="6"/>
+            <line x1="6" y1="18" x2="6.01" y2="18"/>
+          </svg>
+        </div>
+        <div class="home-btn-content">
+          <span class="home-btn-title">Atualizacao Servidor Geral</span>
+          <span class="home-btn-desc">Deploy de EXEs, DLLs e Reports nos servidores</span>
+        </div>
+        <svg class="home-btn-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ TELA FVENDAS ═══════════ -->
+<div id="fvendasScreen" style="display:none">
+  <div class="header">
+    <div class="header-left">
+      <a class="back-link" onclick="navegarPara('home')">&#8592; Menu</a>
+      <h1><span>F</span>Deploy <span class="header-subtitle">Backend Fvendas</span></h1>
+    </div>
+    <span id="exeBadge" class="badge badge-no">Nenhum .exe</span>
+  </div>
+
+  <div class="container">
+
+    <!-- Upload -->
+    <div class="section">
+      <div class="section-title">Arquivo para Deploy</div>
+      <div class="drop-zone" id="dropZone">
+        <p>Arraste o <strong>Fvendas2.0.exe</strong> aqui</p>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fileInput').click()">Selecionar arquivo</button>
+        <input type="file" id="fileInput" accept=".exe" style="display:none">
+      </div>
+      <div class="upload-confirm" id="uploadConfirm" style="display:none">
+        <div class="upload-confirm-file" id="uploadFileName"></div>
+        <div class="upload-confirm-row">
+          <label for="inputVersao">Versao:</label>
+          <input type="text" id="inputVersao" placeholder="Ex: 1.2.0">
+          <label for="inputDescricao">Descricao:</label>
+          <input type="text" id="inputDescricao" placeholder="Ex: Correcao do bug da NFe" class="input-descricao">
+          <button class="btn btn-primary btn-sm" onclick="confirmarUpload()">Enviar</button>
+          <button class="btn btn-ghost btn-sm" onclick="cancelarUpload()">Cancelar</button>
+        </div>
+      </div>
+      <div class="progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
+      <div class="upload-info" id="uploadInfo" style="display:none"></div>
+      <div class="versao-selector" id="versaoSelector" style="display:none">
+        <label for="selectVersao">Versoes salvas:</label>
+        <select id="selectVersao"></select>
+        <button class="btn btn-primary btn-sm" onclick="selecionarVersaoExistente()">Usar esta versao</button>
       </div>
     </div>
-    <div class="progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
-    <div class="upload-info" id="uploadInfo" style="display:none"></div>
-    <div class="versao-selector" id="versaoSelector" style="display:none">
-      <label for="selectVersao">Versoes salvas:</label>
-      <select id="selectVersao"></select>
-      <button class="btn btn-primary btn-sm" onclick="selecionarVersaoExistente()">Usar esta versao</button>
-    </div>
-  </div>
 
-  <!-- Servidores -->
-  <div class="section">
-    <div class="section-title">Servidores</div>
-    <div class="toolbar">
-      <input type="text" id="buscarServidor" placeholder="Buscar servidor..." oninput="filtrarServidores()">
-      <button class="btn btn-primary" onclick="abrirModal()">+ Adicionar</button>
-      <button class="btn btn-ghost" onclick="verificarTodos()">Verificar Todos</button>
-      <button class="btn btn-warning" onclick="atualizarTodos()">Atualizar Todos</button>
+    <!-- Servidores -->
+    <div class="section">
+      <div class="section-title">Servidores</div>
+      <div class="toolbar">
+        <input type="text" id="buscarServidor" placeholder="Buscar servidor..." oninput="filtrarServidores()">
+        <button class="btn btn-primary" onclick="abrirModal()">+ Adicionar</button>
+        <button class="btn btn-ghost" onclick="verificarTodos()">Verificar Todos</button>
+        <button class="btn btn-warning" onclick="atualizarTodos()">Atualizar Todos</button>
+      </div>
+      <div id="serverList"></div>
     </div>
-    <div id="serverList"></div>
-  </div>
 
-  <!-- Histórico -->
-  <div class="section">
-    <div class="historico-toggle" onclick="toggleHistorico()">Historico de deploys &#9660;</div>
-    <div id="historicoContent" style="display:none">
-      <table class="historico-table">
-        <thead><tr><th>Data</th><th>Servidor</th><th>Status</th><th>Duracao</th></tr></thead>
-        <tbody id="historicoBody"></tbody>
-      </table>
+    <!-- Historico -->
+    <div class="section">
+      <div class="historico-toggle" onclick="toggleHistorico()">Historico de deploys &#9660;</div>
+      <div id="historicoContent" style="display:none">
+        <table class="historico-table">
+          <thead><tr><th>Data</th><th>Servidor</th><th>Status</th><th>Duracao</th></tr></thead>
+          <tbody id="historicoBody"></tbody>
+        </table>
+      </div>
     </div>
-  </div>
 
+  </div>
 </div>
 
-<!-- Modal -->
+<!-- ═══════════ TELA SERVIDOR GERAL ═══════════ -->
+<div id="geralScreen" style="display:none">
+  <div class="header">
+    <div class="header-left">
+      <a class="back-link" onclick="navegarPara('home')">&#8592; Menu</a>
+      <h1><span>F</span>Deploy <span class="header-subtitle">Servidor Geral</span></h1>
+    </div>
+    <span id="geralBadge" class="badge badge-no">Nenhuma versao</span>
+  </div>
+
+  <div class="container">
+
+    <!-- Arquivos Fonte -->
+    <div class="section">
+      <div class="section-title">Arquivos Fonte</div>
+      <div id="geralSourceStatus" class="source-status">Verificando...</div>
+      <div class="versao-control" id="geralVersaoControl">
+        <label for="geralInputVersao">Nova versao:</label>
+        <input type="text" id="geralInputVersao" placeholder="Ex: 1.0">
+        <label for="geralInputDescricao">Descricao:</label>
+        <input type="text" id="geralInputDescricao" placeholder="Ex: Correcao do bug da NFe" class="input-descricao">
+        <button class="btn btn-primary btn-sm" id="btnCriarVersaoGeral" onclick="criarVersaoGeral()">Criar Versao</button>
+      </div>
+      <div class="progress-bar" id="geralProgressBar"><div class="fill" id="geralProgressFill"></div></div>
+      <div class="versao-selector" id="geralVersaoSelector" style="display:none">
+        <label for="geralSelectVersao">Versoes salvas:</label>
+        <select id="geralSelectVersao"></select>
+        <button class="btn btn-primary btn-sm" onclick="selecionarVersaoGeral()">Usar esta versao</button>
+      </div>
+    </div>
+
+    <!-- Scripts SQL -->
+    <div class="section">
+      <div class="section-title">Scripts SQL</div>
+      <div id="scriptsStatus" class="source-status">Verificando...</div>
+      <div class="scripts-toolbar" id="scriptsToolbar" style="display:none">
+        <button class="btn btn-ghost btn-sm" onclick="reindexarScripts()">Reindexar Scripts</button>
+        <button class="btn btn-ghost btn-sm" onclick="alterarPastaScripts()">Alterar Pasta</button>
+      </div>
+    </div>
+
+    <!-- Servidores -->
+    <div class="section">
+      <div class="section-title">Servidores</div>
+      <div class="toolbar">
+        <input type="text" id="buscarServidorGeral" placeholder="Buscar servidor..." oninput="filtrarServidoresGeral()">
+        <button class="btn btn-primary" onclick="abrirModal()">+ Adicionar</button>
+        <button class="btn btn-warning" onclick="atualizarTodosGeral()">Atualizar Todos</button>
+      </div>
+      <div id="geralServerList"></div>
+    </div>
+
+    <!-- Historico -->
+    <div class="section">
+      <div class="historico-toggle" onclick="toggleHistoricoGeral()">Historico de deploys &#9660;</div>
+      <div id="geralHistoricoContent" style="display:none">
+        <table class="historico-table">
+          <thead><tr><th>Data</th><th>Servidor</th><th>Status</th><th>Duracao</th></tr></thead>
+          <tbody id="geralHistoricoBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════ MODAL (compartilhado) ═══════════ -->
 <div class="modal-overlay" id="modalOverlay">
-  <div class="modal">
+  <div class="modal modal-servidor">
     <h2 id="modalTitle">Adicionar Servidor</h2>
     <input type="hidden" id="editId">
-    <div class="form-group">
-      <label>Nome do cliente *</label>
-      <input type="text" id="fNome" placeholder="Ex: Agrominas">
-    </div>
-    <div class="form-group">
-      <label>IP ou DDNS *</label>
-      <input type="text" id="fIp" placeholder="Ex: 192.168.1.100">
-    </div>
-    <div class="form-group">
-      <label>Porta SSH</label>
-      <input type="number" id="fPorta" value="22">
-    </div>
-    <div class="form-group">
-      <label>Usuario SSH *</label>
-      <input type="text" id="fUsuario" placeholder="Ex: administrador">
-    </div>
-    <div class="form-group">
-      <label>Senha SSH *</label>
-      <input type="password" id="fSenha">
-    </div>
-    <div class="form-group">
-      <label>Descricao</label>
-      <input type="text" id="fDescricao" placeholder="Ex: Servidor principal">
+    <div class="modal-body-columns">
+      <!-- Coluna esquerda: dados do servidor -->
+      <div class="modal-col-left">
+        <div class="form-group">
+          <label>Nome do cliente *</label>
+          <input type="text" id="fNome" placeholder="Ex: Agrominas">
+        </div>
+        <div class="form-group-row">
+          <div class="form-group form-group-flex">
+            <label>IP ou DDNS *</label>
+            <input type="text" id="fIp" placeholder="Ex: 192.168.1.100">
+          </div>
+          <div class="form-group form-group-porta">
+            <label>Porta SSH</label>
+            <input type="number" id="fPorta" value="22">
+          </div>
+        </div>
+        <div class="form-group-row">
+          <div class="form-group form-group-half">
+            <label>Usuario SSH *</label>
+            <input type="text" id="fUsuario" placeholder="Ex: administrador">
+          </div>
+          <div class="form-group form-group-half">
+            <label>Senha SSH *</label>
+            <input type="password" id="fSenha">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Descricao</label>
+          <input type="text" id="fDescricao" placeholder="Ex: Servidor principal">
+        </div>
+        <div class="form-group pg-toggle-group">
+          <label class="pg-toggle-label">
+            <input type="checkbox" id="fTemPostgreSQL" onchange="togglePgFields()">
+            <span>Tem PostgreSQL</span>
+          </label>
+        </div>
+        <div id="pgFields" style="display:none">
+          <div class="form-group">
+            <label>IP do Banco (se diferente do servidor)</label>
+            <input type="text" id="fPgHost" placeholder="Deixe vazio se o banco esta neste servidor">
+          </div>
+          <div class="form-group-row">
+            <div class="form-group form-group-flex">
+              <label>Banco PostgreSQL *</label>
+              <input type="text" id="fPgBanco" placeholder="Ex: boibrassgo">
+            </div>
+            <div class="form-group form-group-porta">
+              <label>Porta PG</label>
+              <input type="number" id="fPgPorta" value="5432">
+            </div>
+          </div>
+          <div class="form-group-row">
+            <div class="form-group form-group-half">
+              <label>Usuario PG</label>
+              <input type="text" id="fPgUsuario" value="frigo">
+            </div>
+            <div class="form-group form-group-half">
+              <label>Senha PG *</label>
+              <input type="password" id="fPgSenha">
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Coluna direita: grupo de replicacao -->
+      <div class="modal-col-right" id="grupoReplicacaoFields" style="display:none">
+        <div class="form-group grupo-replicacao-section">
+          <!-- Preenchido por renderGrupoReplicacaoModal() -->
+        </div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
       <button class="btn btn-ghost" id="btnTestarConexao" onclick="testarConexaoModal()">Testar conexao</button>
       <button class="btn btn-primary" onclick="salvarServidor()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL SCRIPTS SQL ═══════════ -->
+<div class="modal-overlay" id="scriptsModalOverlay">
+  <div class="modal scripts-modal">
+    <h2 id="scriptsModalTitle">Executando Scripts SQL</h2>
+    <div class="scripts-modal-info" id="scriptsModalInfo"></div>
+    <div class="scripts-list" id="scriptsModalList"></div>
+    <div class="scripts-error-log" id="scriptsErrorLog" style="display:none"></div>
+    <div class="scripts-modal-footer" id="scriptsModalFooter" style="display:none">
+      <button class="btn btn-primary" onclick="fecharScriptsModal()">Fechar</button>
     </div>
   </div>
 </div>

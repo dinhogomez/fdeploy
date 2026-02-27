@@ -1,0 +1,1717 @@
+[
+  {
+    "servidor": "Padrao beef - Frigorifico",
+    "ip": "26.117.224.103",
+    "sucesso": true,
+    "duracao": "216.5s",
+    "data": "2026-02-26T14:22:31.990Z",
+    "log": [
+      {
+        "ts": "10:18:55",
+        "msg": "Usando cache da versao 5 (101.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "10:18:55",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "10:18:56",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "10:18:56",
+        "msg": "Parando servico no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "10:18:59",
+        "msg": "Servico parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "10:18:59",
+        "msg": "Fazendo backup do .exe atual...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "10:19:00",
+        "msg": "Backup concluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "10:19:00",
+        "msg": "Copiando arquivo para servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "10:22:19",
+        "msg": "Arquivo copiado para servidor de destino",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "10:22:19",
+        "msg": "Descompactando arquivo no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "10:22:22",
+        "msg": "Arquivo descompactado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "10:22:22",
+        "msg": "Gravando versao 5 no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "10:22:23",
+        "msg": "Versao 5 gravada",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "10:22:23",
+        "msg": "Excluindo log antigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "10:22:23",
+        "msg": "Log antigo excluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "10:22:23",
+        "msg": "Iniciando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "10:22:26",
+        "msg": "Comando net start executado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "10:22:26",
+        "msg": "Verificando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "10:22:29",
+        "msg": "Servico rodando! Versao: 5",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "10:22:29",
+        "msg": "Aguardando log de inicializacao...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "--- Log de inicializacao ---",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][BOOT 2026-02-26T14:23:46.023Z] Servidor iniciando",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][BOOT 2026-02-26T14:23:46.036Z] Base path: C:\\f\\Fvendas2.0",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][BOOT 2026-02-26T14:23:46.041Z] Middlewares básicos carregados",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][BOOT 2026-02-26T14:23:46.037Z] Timezone: America/Sao_Paulo",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][BOOT 2026-02-26T14:23:46.277Z] Models e services carregados",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][BOOT 2026-02-26T14:23:46.278Z] Iniciando carga do database",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][BOOT 2026-02-26T14:23:46.039Z] Rotas de arquivos estáticos configuradas",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][BOOT 2026-02-26T14:23:46.312Z] Testando conexão com o banco (authenticate)",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46]ip:192.168.0.243 banco: padraobeef",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][BOOT 2026-02-26T14:23:46.311Z] Database carregado",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][BOOT 2026-02-26T14:23:46.340Z] Rotas da API carregadas",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][BOOT 2026-02-26T14:23:46.597Z] Conexão com o banco CONFIRMADA",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][BOOT 2026-02-26T14:23:46.605Z] Extensão unaccent verificada/criada",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][estoque_cache] pi.estoque_cache ja existe, verificando indice unico...",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][BOOT 2026-02-26T14:23:46.623Z] Executando primeiro refresh do pi.estoque_cache...",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "[2026-2-26 11:23:46][BOOT 2026-02-26T14:23:46.828Z] sequelize.sync() finalizado",
+        "tipo": "info"
+      },
+      {
+        "ts": "10:22:31",
+        "msg": "Duracao: 216.5s",
+        "tipo": "info"
+      }
+    ]
+  },
+  {
+    "servidor": "Padrao beef - Frigorifico",
+    "ip": "26.117.224.103",
+    "sucesso": true,
+    "duracao": "166.3s",
+    "data": "2026-02-26T13:28:16.288Z",
+    "log": [
+      {
+        "ts": "09:25:29",
+        "msg": "Usando cache da versao 5 (101.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "09:25:29",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "09:25:30",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "09:25:30",
+        "msg": "Parando servico no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "09:25:33",
+        "msg": "Servico parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "09:25:33",
+        "msg": "Fazendo backup do .exe atual...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "09:25:34",
+        "msg": "Backup concluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "09:25:34",
+        "msg": "Copiando arquivo para servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "09:28:04",
+        "msg": "Arquivo copiado para servidor de destino",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "09:28:04",
+        "msg": "Descompactando arquivo no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "09:28:07",
+        "msg": "Arquivo descompactado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "09:28:07",
+        "msg": "Gravando versao 5 no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "09:28:07",
+        "msg": "Versao 5 gravada",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "09:28:08",
+        "msg": "Excluindo log antigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "09:28:08",
+        "msg": "Log antigo excluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "09:28:08",
+        "msg": "Iniciando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "09:28:10",
+        "msg": "Comando net start executado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "09:28:10",
+        "msg": "Verificando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "09:28:14",
+        "msg": "Servico rodando! Versao: 5",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "09:28:14",
+        "msg": "Aguardando log de inicializacao...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "--- Log de inicializacao ---",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30][BOOT 2026-02-26T13:29:30.257Z] Servidor iniciando",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30][BOOT 2026-02-26T13:29:30.261Z] Base path: C:\\f\\Fvendas2.0",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30][BOOT 2026-02-26T13:29:30.262Z] Timezone: America/Sao_Paulo",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30][BOOT 2026-02-26T13:29:30.263Z] Middlewares básicos carregados",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30][BOOT 2026-02-26T13:29:30.262Z] Rotas de arquivos estáticos configuradas",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30]ip:192.168.0.243 banco: padraobeef",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30][BOOT 2026-02-26T13:29:30.348Z] Models e services carregados",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30][BOOT 2026-02-26T13:29:30.406Z] Database carregado",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30][BOOT 2026-02-26T13:29:30.436Z] Rotas da API carregadas",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30][BOOT 2026-02-26T13:29:30.406Z] Testando conexão com o banco (authenticate)",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30][BOOT 2026-02-26T13:29:30.349Z] Iniciando carga do database",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30][BOOT 2026-02-26T13:29:30.582Z] Conexão com o banco CONFIRMADA",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30][BOOT 2026-02-26T13:29:30.587Z] Extensão unaccent verificada/criada",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30][estoque_cache] Criando pi.estoque_cache pela primeira vez...",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "[2026-2-26 10:29:30][BOOT 2026-02-26T13:29:30.780Z] sequelize.sync() finalizado",
+        "tipo": "info"
+      },
+      {
+        "ts": "09:28:16",
+        "msg": "Duracao: 166.3s",
+        "tipo": "info"
+      }
+    ]
+  },
+  {
+    "servidor": "Agromina Balsas",
+    "ip": "26.144.158.161",
+    "sucesso": true,
+    "duracao": "55.2s",
+    "data": "2026-02-26T12:27:52.763Z",
+    "log": [
+      {
+        "ts": "08:26:57",
+        "msg": "Usando cache da versao 5 (101.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "08:26:57",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "08:26:58",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "08:26:58",
+        "msg": "Parando servico no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "08:27:01",
+        "msg": "Servico parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "08:27:01",
+        "msg": "Fazendo backup do .exe atual...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "08:27:02",
+        "msg": "Backup concluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "08:27:03",
+        "msg": "Copiando arquivo para servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "08:27:33",
+        "msg": "Arquivo copiado para servidor de destino",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "08:27:33",
+        "msg": "Descompactando arquivo no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "08:27:39",
+        "msg": "Arquivo descompactado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "08:27:39",
+        "msg": "Gravando versao 5 no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "08:27:40",
+        "msg": "Versao 5 gravada",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "08:27:40",
+        "msg": "Excluindo log antigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "08:27:41",
+        "msg": "Log antigo excluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "08:27:41",
+        "msg": "Iniciando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "08:27:46",
+        "msg": "Comando net start executado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "08:27:46",
+        "msg": "Verificando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "08:27:50",
+        "msg": "Servico rodando! Versao: 5",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "08:27:50",
+        "msg": "Aguardando log de inicializacao...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "--- Log de inicializacao ---",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:44][BOOT 2026-02-26T12:27:44.379Z] Servidor iniciando",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:44][BOOT 2026-02-26T12:27:44.397Z] Base path: C:\\f\\Fvendas2.0",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:44][BOOT 2026-02-26T12:27:44.403Z] Middlewares básicos carregados",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:44][BOOT 2026-02-26T12:27:44.398Z] Timezone: America/Sao_Paulo",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:44][BOOT 2026-02-26T12:27:44.716Z] Models e services carregados",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:44][BOOT 2026-02-26T12:27:44.717Z] Iniciando carga do database",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:44][BOOT 2026-02-26T12:27:44.400Z] Rotas de arquivos estáticos configuradas",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:44][BOOT 2026-02-26T12:27:44.900Z] Testando conexão com o banco (authenticate)",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:44][BOOT 2026-02-26T12:27:44.898Z] Database carregado",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:45][BOOT 2026-02-26T12:27:45.057Z] Rotas da API carregadas",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:44]ip:localhost banco: agrominas",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:45][BOOT 2026-02-26T12:27:45.296Z] Conexão com o banco CONFIRMADA",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:45][BOOT 2026-02-26T12:27:45.302Z] Extensão unaccent verificada/criada",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:45][estoque_cache] pi.estoque_cache ja existe, verificando indice unico...",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:45][BOOT 2026-02-26T12:27:45.323Z] Executando primeiro refresh do pi.estoque_cache...",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:45][BOOT 2026-02-26T12:27:45.549Z] sequelize.sync() finalizado",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:48][estoque_cache] Refresh concluido em 2.7s",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:48][BOOT 2026-02-26T12:27:48.040Z] Cache de estoque pronto",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:48][BOOT 2026-02-26T12:27:48.046Z] Colunas FCM verificadas em sl.dispositivo",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:48][BOOT 2026-02-26T12:27:48.050Z] Tabela sl.notificacoes_historico verificada",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:48]Servidor online na porta 3334",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "[2026-2-26 9:27:48][BOOT 2026-02-26T12:27:48.280Z] Cron de notificações matinais agendado (07:00 BRT)",
+        "tipo": "info"
+      },
+      {
+        "ts": "08:27:52",
+        "msg": "Duracao: 55.2s",
+        "tipo": "info"
+      }
+    ]
+  },
+  {
+    "servidor": "Comercio sao pedro - CG",
+    "ip": "26.244.99.18",
+    "sucesso": true,
+    "duracao": "145.8s",
+    "data": "2026-02-26T05:34:38.482Z",
+    "log": [
+      {
+        "ts": "01:32:12",
+        "msg": "Usando cache da versao 5 (101.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:32:12",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:32:13",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:32:13",
+        "msg": "Parando servico no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:32:16",
+        "msg": "Servico parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:32:16",
+        "msg": "Fazendo backup do .exe atual...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:32:16",
+        "msg": "Backup concluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:32:16",
+        "msg": "Copiando arquivo para servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:34:04",
+        "msg": "Arquivo copiado para servidor de destino",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:34:04",
+        "msg": "Descompactando arquivo no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:34:07",
+        "msg": "Arquivo descompactado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:34:07",
+        "msg": "Gravando versao 5 no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:34:08",
+        "msg": "Versao 5 gravada",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:34:09",
+        "msg": "Excluindo log antigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:34:09",
+        "msg": "Log antigo excluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:34:09",
+        "msg": "Iniciando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:34:11",
+        "msg": "Comando net start executado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:34:11",
+        "msg": "Verificando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:34:15",
+        "msg": "Servico rodando! Versao: 5",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:34:15",
+        "msg": "Aguardando log de inicializacao...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:34:38",
+        "msg": "Log de inicializacao nao foi gerado em 20s",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:34:38",
+        "msg": "Duracao: 145.8s",
+        "tipo": "info"
+      }
+    ]
+  },
+  {
+    "servidor": "Dbauer - PR",
+    "ip": "26.53.217.141",
+    "sucesso": true,
+    "duracao": "144.6s",
+    "data": "2026-02-26T05:27:13.758Z",
+    "log": [
+      {
+        "ts": "01:24:49",
+        "msg": "Usando cache da versao 5 (101.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:24:49",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:24:49",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:24:49",
+        "msg": "Parando servico no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:24:52",
+        "msg": "Servico parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:24:52",
+        "msg": "Fazendo backup do .exe atual...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:24:53",
+        "msg": "Backup concluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:24:53",
+        "msg": "Copiando arquivo para servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:26:56",
+        "msg": "Arquivo copiado para servidor de destino",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:26:56",
+        "msg": "Descompactando arquivo no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:27:00",
+        "msg": "Arquivo descompactado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:27:00",
+        "msg": "Gravando versao 5 no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:27:02",
+        "msg": "Versao 5 gravada",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:27:03",
+        "msg": "Excluindo log antigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:27:03",
+        "msg": "Log antigo excluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:27:03",
+        "msg": "Iniciando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:27:08",
+        "msg": "Comando net start executado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:27:08",
+        "msg": "Verificando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:27:11",
+        "msg": "Servico rodando! Versao: 5",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "01:27:11",
+        "msg": "Aguardando log de inicializacao...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "--- Log de inicializacao ---",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:04][BOOT 2026-02-26T05:27:04.921Z] Servidor iniciando",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:04][BOOT 2026-02-26T05:27:04.928Z] Base path: C:\\f\\Fvendas2.0",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:04][BOOT 2026-02-26T05:27:04.930Z] Middlewares básicos carregados",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:04][BOOT 2026-02-26T05:27:04.928Z] Timezone: America/Sao_Paulo",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:05][BOOT 2026-02-26T05:27:05.052Z] Models e services carregados",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:04][BOOT 2026-02-26T05:27:04.929Z] Rotas de arquivos estáticos configuradas",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:05][BOOT 2026-02-26T05:27:05.053Z] Iniciando carga do database",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:05][BOOT 2026-02-26T05:27:05.107Z] Testando conexão com o banco (authenticate)",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:05][BOOT 2026-02-26T05:27:05.157Z] Rotas da API carregadas",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:05]ip:192.168.1.250 banco: dbauer",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:05][BOOT 2026-02-26T05:27:05.107Z] Database carregado",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:05][BOOT 2026-02-26T05:27:05.281Z] Conexão com o banco CONFIRMADA",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:05][BOOT 2026-02-26T05:27:05.283Z] Extensão unaccent verificada/criada",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:05][estoque_cache] pi.estoque_cache ja existe, verificando indice unico...",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:05][BOOT 2026-02-26T05:27:05.290Z] Executando primeiro refresh do pi.estoque_cache...",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:05][BOOT 2026-02-26T05:27:05.403Z] sequelize.sync() finalizado",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:08][estoque_cache] Refresh concluido em 3.2s",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:08][BOOT 2026-02-26T05:27:08.445Z] Cache de estoque pronto",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:08][BOOT 2026-02-26T05:27:08.451Z] Colunas FCM verificadas em sl.dispositivo",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:08][BOOT 2026-02-26T05:27:08.453Z] Tabela sl.notificacoes_historico verificada",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:08]Servidor online na porta 3334",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "[2026-2-26 2:27:08][BOOT 2026-02-26T05:27:08.512Z] Cron de notificações matinais agendado (07:00 BRT)",
+        "tipo": "info"
+      },
+      {
+        "ts": "01:27:13",
+        "msg": "Duracao: 144.6s",
+        "tipo": "info"
+      }
+    ]
+  },
+  {
+    "servidor": "Comercio sao pedro - CG",
+    "ip": "26.244.99.18",
+    "sucesso": true,
+    "duracao": "153.4s",
+    "data": "2026-02-26T04:55:03.983Z",
+    "log": [
+      {
+        "ts": "00:52:30",
+        "msg": "Compactando arquivo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:52:37",
+        "msg": "Arquivo compactado: 266.6 MB → 101.3 MB (-62%)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:52:37",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:52:37",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:52:37",
+        "msg": "Parando servico no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:52:37",
+        "msg": "Aviso ao parar: O servi�o de Fvendas2.0 n�o foi iniciado.\r\n\r\nPara obter mais ajuda, digite NET HELPMSG 3521.",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:52:37",
+        "msg": "Servico parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:52:37",
+        "msg": "Fazendo backup do .exe atual...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:52:38",
+        "msg": "Aviso no backup: O sistema n�o pode encontrar o arquivo especificado.",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:52:38",
+        "msg": "Backup concluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:52:38",
+        "msg": "Copiando arquivo para servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:54:27",
+        "msg": "Arquivo copiado para servidor de destino",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:54:27",
+        "msg": "Descompactando arquivo no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:54:31",
+        "msg": "Arquivo descompactado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:54:32",
+        "msg": "Excluindo log antigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:54:32",
+        "msg": "Log antigo excluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:54:32",
+        "msg": "Iniciando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:54:37",
+        "msg": "Comando net start executado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:54:37",
+        "msg": "Verificando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:54:41",
+        "msg": "Servico rodando! Versao: ?",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:54:41",
+        "msg": "Aguardando log de inicializacao...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:55:03",
+        "msg": "Log de inicializacao nao foi gerado em 20s",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:55:03",
+        "msg": "Duracao: 153.4s",
+        "tipo": "info"
+      }
+    ]
+  },
+  {
+    "servidor": "Comercio sao pedro - CG",
+    "ip": "26.244.99.18",
+    "sucesso": false,
+    "duracao": "10.3s",
+    "data": "2026-02-26T04:48:51.359Z",
+    "log": [
+      {
+        "ts": "00:48:41",
+        "msg": "Compactando arquivo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:48:46",
+        "msg": "Arquivo compactado: 266.6 MB → 101.3 MB (-62%)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:48:46",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:48:47",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:48:47",
+        "msg": "Parando servico no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:48:50",
+        "msg": "Servico parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:48:50",
+        "msg": "Fazendo backup do .exe atual...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:48:50",
+        "msg": "Aviso no backup: O sistema n�o pode encontrar o arquivo especificado.",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:48:50",
+        "msg": "Backup concluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:48:50",
+        "msg": "Copiando arquivo para servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:48:51",
+        "msg": "ERRO: No such file",
+        "tipo": "erro"
+      },
+      {
+        "ts": "00:48:51",
+        "msg": "Duracao: 10.3s",
+        "tipo": "info"
+      }
+    ]
+  },
+  {
+    "servidor": "Agromina Balsas",
+    "ip": "26.144.158.161",
+    "sucesso": true,
+    "duracao": "684.5s",
+    "data": "2026-02-26T04:48:41.035Z",
+    "log": [
+      {
+        "ts": "00:37:16",
+        "msg": "Compactando arquivo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:37:22",
+        "msg": "Arquivo compactado: 266.6 MB → 101.3 MB (-62%)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:37:22",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:37:24",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:37:24",
+        "msg": "Parando servico no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:37:27",
+        "msg": "Servico parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:37:27",
+        "msg": "Fazendo backup do .exe atual...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:37:29",
+        "msg": "Backup concluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:37:29",
+        "msg": "Copiando arquivo para servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:48:13",
+        "msg": "Arquivo copiado para servidor de destino",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:48:13",
+        "msg": "Descompactando arquivo no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:48:18",
+        "msg": "Arquivo descompactado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:48:19",
+        "msg": "Excluindo log antigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:48:20",
+        "msg": "Log antigo excluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:48:20",
+        "msg": "Iniciando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:48:33",
+        "msg": "Comando net start executado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:48:33",
+        "msg": "Verificando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:48:38",
+        "msg": "Servico rodando! Versao: ?",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:48:38",
+        "msg": "Aguardando log de inicializacao...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "--- Log de inicializacao ---",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:31][BOOT 2026-02-26T04:48:31.251Z] Servidor iniciando",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:31][BOOT 2026-02-26T04:48:31.265Z] Base path: C:\\f\\Fvendas2.0",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:31][BOOT 2026-02-26T04:48:31.272Z] Middlewares básicos carregados",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:31][BOOT 2026-02-26T04:48:31.267Z] Timezone: America/Sao_Paulo",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:31][BOOT 2026-02-26T04:48:31.639Z] Models e services carregados",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:31][BOOT 2026-02-26T04:48:31.641Z] Iniciando carga do database",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:31][BOOT 2026-02-26T04:48:31.269Z] Rotas de arquivos estáticos configuradas",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:31][BOOT 2026-02-26T04:48:31.797Z] Testando conexão com o banco (authenticate)",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:31][BOOT 2026-02-26T04:48:31.795Z] Database carregado",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:31][BOOT 2026-02-26T04:48:31.955Z] Rotas da API carregadas",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:31]ip:localhost banco: agrominas",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:32][BOOT 2026-02-26T04:48:32.220Z] Conexão com o banco CONFIRMADA",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:32][BOOT 2026-02-26T04:48:32.223Z] Extensão unaccent verificada/criada",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:32][estoque_cache] pi.estoque_cache ja existe, verificando indice unico...",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:32][BOOT 2026-02-26T04:48:32.243Z] Executando primeiro refresh do pi.estoque_cache...",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:32][BOOT 2026-02-26T04:48:32.540Z] sequelize.sync() finalizado",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:35][estoque_cache] Refresh concluido em 2.9s",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:35][BOOT 2026-02-26T04:48:35.164Z] Cache de estoque pronto",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:35][BOOT 2026-02-26T04:48:35.167Z] Colunas FCM verificadas em sl.dispositivo",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:35][BOOT 2026-02-26T04:48:35.170Z] Tabela sl.notificacoes_historico verificada",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:35][BOOT 2026-02-26T04:48:35.350Z] Cron de notificações matinais agendado (07:00 BRT)",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "[2026-2-26 1:48:35]Servidor online na porta 3334",
+        "tipo": "info"
+      },
+      {
+        "ts": "00:48:41",
+        "msg": "Duracao: 684.5s",
+        "tipo": "info"
+      }
+    ]
+  },
+  {
+    "servidor": "Agromina Balsas",
+    "ip": "26.144.158.161",
+    "sucesso": true,
+    "duracao": "1074.9s",
+    "data": "2026-02-26T00:23:52.619Z",
+    "log": [
+      {
+        "ts": "20:05:57",
+        "msg": "Compactando arquivo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:06:03",
+        "msg": "Arquivo compactado: 266.6 MB → 101.3 MB (-62%)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:06:03",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:06:06",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:06:06",
+        "msg": "Parando servico no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:06:09",
+        "msg": "Servico parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:06:09",
+        "msg": "Fazendo backup do .exe atual...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:06:11",
+        "msg": "Backup concluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:06:11",
+        "msg": "Copiando arquivo para servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:23:29",
+        "msg": "Arquivo copiado para servidor de destino",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:23:29",
+        "msg": "Descompactando arquivo no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:23:35",
+        "msg": "Arquivo descompactado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:23:36",
+        "msg": "Excluindo log antigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:23:37",
+        "msg": "Log antigo excluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:23:37",
+        "msg": "Iniciando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:23:43",
+        "msg": "Comando net start executado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:23:43",
+        "msg": "Verificando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:23:49",
+        "msg": "Servico rodando! Versao: ?",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:23:49",
+        "msg": "Aguardando log de inicializacao...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "--- Log de inicializacao ---",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:40][BOOT 2026-02-26T00:23:40.903Z] Servidor iniciando",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:40][BOOT 2026-02-26T00:23:40.918Z] Base path: C:\\f\\Fvendas2.0",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:40][BOOT 2026-02-26T00:23:40.921Z] Rotas de arquivos estáticos configuradas",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:40][BOOT 2026-02-26T00:23:40.924Z] Middlewares básicos carregados",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:40][BOOT 2026-02-26T00:23:40.919Z] Timezone: America/Sao_Paulo",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:41][BOOT 2026-02-26T00:23:41.234Z] Models e services carregados",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:41]ip:localhost banco: agrominas",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:41][BOOT 2026-02-26T00:23:41.235Z] Iniciando carga do database",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:41][BOOT 2026-02-26T00:23:41.405Z] Database carregado",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:41][BOOT 2026-02-26T00:23:41.407Z] Testando conexão com o banco (authenticate)",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:41][BOOT 2026-02-26T00:23:41.579Z] Rotas da API carregadas",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:41][BOOT 2026-02-26T00:23:41.809Z] Conexão com o banco CONFIRMADA",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:41][BOOT 2026-02-26T00:23:41.811Z] Extensão unaccent verificada/criada",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:41][estoque_cache] pi.estoque_cache ja existe, verificando indice unico...",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:41][BOOT 2026-02-26T00:23:41.857Z] Executando primeiro refresh do pi.estoque_cache...",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:42][BOOT 2026-02-26T00:23:42.131Z] sequelize.sync() finalizado",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:44][estoque_cache] Refresh concluido em 3.1s",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:44][BOOT 2026-02-26T00:23:44.998Z] Cache de estoque pronto",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:45][BOOT 2026-02-26T00:23:45.002Z] Colunas FCM verificadas em sl.dispositivo",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:45][BOOT 2026-02-26T00:23:45.004Z] Tabela sl.notificacoes_historico verificada",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:45][BOOT 2026-02-26T00:23:45.125Z] Cron de notificações matinais agendado (07:00 BRT)",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "[2026-2-25 21:23:45]Servidor online na porta 3334",
+        "tipo": "info"
+      },
+      {
+        "ts": "20:23:52",
+        "msg": "Duracao: 1074.9s",
+        "tipo": "info"
+      }
+    ]
+  },
+  {
+    "servidor": "Agromina Balsas",
+    "ip": "26.144.158.161",
+    "sucesso": true,
+    "duracao": "1010.2s",
+    "data": "2026-02-26T00:04:09.600Z",
+    "log": [
+      {
+        "ts": "19:47:19",
+        "msg": "Compactando arquivo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "19:47:25",
+        "msg": "Arquivo compactado: 266.6 MB → 101.3 MB (-62%)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "19:47:25",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "19:47:27",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "19:47:28",
+        "msg": "Parando servico no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "19:47:29",
+        "msg": "Aviso ao parar: O servi�o de Fvendas2.0 n�o foi iniciado.\r\n\r\nPara obter mais ajuda, digite NET HELPMSG 3521.",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "19:47:29",
+        "msg": "Servico parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "19:47:29",
+        "msg": "Fazendo backup do .exe atual...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "19:47:31",
+        "msg": "Aviso no backup: O sistema n�o pode encontrar o arquivo especificado.",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "19:47:31",
+        "msg": "Backup concluido",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "19:47:31",
+        "msg": "Copiando arquivo para servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:03:43",
+        "msg": "Arquivo copiado para servidor de destino",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:03:43",
+        "msg": "Descompactando arquivo no servidor de destino...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:03:49",
+        "msg": "Arquivo descompactado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:03:51",
+        "msg": "Iniciando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:04:04",
+        "msg": "Comando net start executado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:04:04",
+        "msg": "Verificando servico...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:04:09",
+        "msg": "Servico rodando! Versao: ?",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:04:09",
+        "msg": "Duracao: 1010.2s",
+        "tipo": "info"
+      }
+    ]
+  }
+]

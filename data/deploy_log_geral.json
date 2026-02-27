@@ -1,0 +1,3284 @@
+[
+  {
+    "servidor": "Comercio sao pedro - CG",
+    "ip": "192.168.100.254",
+    "sucesso": true,
+    "duracao": "164.2s",
+    "data": "2026-02-27T04:17:03.251Z",
+    "log": [
+      {
+        "ts": "00:14:19",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:14:19",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:14:40",
+        "msg": "Falha na conexao SSH: connect ETIMEDOUT 192.168.100.254:22",
+        "tipo": "erro"
+      },
+      {
+        "ts": "00:14:40",
+        "msg": "Conexao SSH falhou neste servidor",
+        "tipo": "erro"
+      },
+      {
+        "ts": "00:14:40",
+        "msg": "Verificando OpenSSH via WMI/DCOM (192.168.100.254)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:14:40",
+        "msg": "Conectando via WMI (porta 135)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:15:00",
+        "msg": "Servico sshd ja esta rodando",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:15:00",
+        "msg": "Adicionando regra de firewall (porta 22)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:15:17",
+        "msg": "Regra de firewall criada",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:15:17",
+        "msg": "Testando conexao SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:15:22",
+        "msg": "Conexao SSH estabelecida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:15:22",
+        "msg": "Tentando conectar via SSH novamente...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:15:23",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:15:23",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:15:23",
+        "msg": "Apache detectado: Apache2.4",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:15:23",
+        "msg": "Parando servico Apache2.4...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:15:26",
+        "msg": "Apache parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:15:26",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:15:39",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:15:39",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:15:52",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:15:52",
+        "msg": "Enviando DLLs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:15:55",
+        "msg": "Arquivo enviado (8.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:15:55",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:16:02",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:16:02",
+        "msg": "Enviando Reports para C:\\f\\WebPrint\\reports...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:16:13",
+        "msg": "Arquivo enviado (48.2 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:16:13",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:16:35",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:16:36",
+        "msg": "Verificando disponibilidade do psql...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:16:37",
+        "msg": "psql disponivel",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:16:37",
+        "msg": "Consultando versao do banco \"comercio_sp_pg18\"...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:16:37",
+        "msg": "Versao atual do banco: 2675",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:16:37",
+        "msg": "Nenhum script SQL pendente",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:16:37",
+        "msg": "Iniciando servico Apache2.4...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:16:43",
+        "msg": "Apache2.4 rodando!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:16:43",
+        "msg": "Atualizacao concluida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:16:43",
+        "msg": "Removendo regra de firewall SSH (porta 22)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:17:03",
+        "msg": "Regra de firewall SSH removida",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:17:03",
+        "msg": "Duracao: 164.2s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": {
+      "executados": 0,
+      "sucesso": true,
+      "erro": null
+    }
+  },
+  {
+    "servidor": "Comercio sao pedro - CG",
+    "ip": "192.168.100.254",
+    "sucesso": true,
+    "duracao": "161.6s",
+    "data": "2026-02-27T04:08:50.443Z",
+    "log": [
+      {
+        "ts": "00:06:08",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:06:08",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:06:29",
+        "msg": "Falha na conexao SSH: connect ETIMEDOUT 192.168.100.254:22",
+        "tipo": "erro"
+      },
+      {
+        "ts": "00:06:29",
+        "msg": "Conexao SSH falhou neste servidor",
+        "tipo": "erro"
+      },
+      {
+        "ts": "00:06:29",
+        "msg": "Verificando OpenSSH via WMI/DCOM (192.168.100.254)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:06:29",
+        "msg": "Conectando via WMI (porta 135)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:06:50",
+        "msg": "Servico sshd ja esta rodando",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:06:50",
+        "msg": "Adicionando regra de firewall (porta 22)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:07:08",
+        "msg": "Regra de firewall criada",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:07:08",
+        "msg": "Testando conexao SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:07:13",
+        "msg": "Conexao SSH estabelecida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:07:13",
+        "msg": "Tentando conectar via SSH novamente...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:07:14",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:07:14",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:07:16",
+        "msg": "Apache detectado: Apache2.2",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:07:16",
+        "msg": "Parando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:07:16",
+        "msg": "Aviso ao parar Apache: O servi�o de Apache2.2 n�o foi iniciado.\r\n\r\nPara obter mais ajuda, digite NET HELPMSG 3521.",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:07:16",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:07:26",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:07:26",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:07:40",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:07:40",
+        "msg": "Enviando DLLs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:07:42",
+        "msg": "Arquivo enviado (8.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:07:42",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:07:49",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:07:50",
+        "msg": "Enviando Reports para C:\\f\\WebPrint\\reports...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:08:02",
+        "msg": "Arquivo enviado (48.2 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:08:02",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:08:25",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:08:26",
+        "msg": "Verificando disponibilidade do psql...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:08:26",
+        "msg": "psql disponivel",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:08:26",
+        "msg": "Consultando versao do banco \"comercio_sp_pg18\"...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:08:27",
+        "msg": "Versao atual do banco: 2675",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:08:27",
+        "msg": "Nenhum script SQL pendente",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:08:27",
+        "msg": "Iniciando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:08:30",
+        "msg": "AVISO: Apache2.2 pode nao ter iniciado corretamente",
+        "tipo": "erro"
+      },
+      {
+        "ts": "00:08:30",
+        "msg": "Atualizacao concluida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:08:30",
+        "msg": "Removendo regra de firewall SSH (porta 22)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:08:50",
+        "msg": "Regra de firewall SSH removida",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:08:50",
+        "msg": "Duracao: 161.6s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": {
+      "executados": 0,
+      "sucesso": true,
+      "erro": null
+    }
+  },
+  {
+    "servidor": "Comercio sao pedro - CG",
+    "ip": "192.168.100.254",
+    "sucesso": true,
+    "duracao": "152.9s",
+    "data": "2026-02-27T04:03:33.956Z",
+    "log": [
+      {
+        "ts": "00:01:01",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:01:01",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:01:22",
+        "msg": "Falha na conexao SSH: connect ETIMEDOUT 192.168.100.254:22",
+        "tipo": "erro"
+      },
+      {
+        "ts": "00:01:22",
+        "msg": "Conexao SSH falhou neste servidor",
+        "tipo": "erro"
+      },
+      {
+        "ts": "00:01:22",
+        "msg": "Verificando OpenSSH via WMI/DCOM (192.168.100.254)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:01:22",
+        "msg": "Conectando via WMI (porta 135)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:01:42",
+        "msg": "Servico sshd ja esta rodando",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:01:42",
+        "msg": "Adicionando regra de firewall (porta 22)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:01:59",
+        "msg": "Regra de firewall criada",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:01:59",
+        "msg": "Testando conexao SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:02:05",
+        "msg": "Conexao SSH estabelecida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:02:05",
+        "msg": "Tentando conectar via SSH novamente...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:02:05",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:02:05",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:02:07",
+        "msg": "Apache detectado: Apache2.2",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:02:07",
+        "msg": "Parando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:02:07",
+        "msg": "Aviso ao parar Apache: O servi�o de Apache2.2 n�o foi iniciado.\r\n\r\nPara obter mais ajuda, digite NET HELPMSG 3521.",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:02:07",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:02:17",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:02:17",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:02:29",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:02:29",
+        "msg": "Enviando DLLs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:02:31",
+        "msg": "Arquivo enviado (8.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:02:31",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:02:39",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:02:39",
+        "msg": "Enviando Reports para C:\\f\\WebPrint\\reports...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:02:48",
+        "msg": "Arquivo enviado (48.2 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:02:48",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:03:09",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:03:09",
+        "msg": "Verificando disponibilidade do psql...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:03:10",
+        "msg": "psql disponivel",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:03:10",
+        "msg": "Consultando versao do banco \"comercio_sp_pg18\"...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:03:10",
+        "msg": "Versao atual do banco: 2675",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:03:10",
+        "msg": "Nenhum script SQL pendente",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:03:10",
+        "msg": "Iniciando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:03:14",
+        "msg": "AVISO: Apache2.2 pode nao ter iniciado corretamente",
+        "tipo": "erro"
+      },
+      {
+        "ts": "00:03:14",
+        "msg": "Atualizacao concluida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:03:14",
+        "msg": "Removendo regra de firewall SSH (porta 22)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "00:03:33",
+        "msg": "Regra de firewall SSH removida",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "00:03:33",
+        "msg": "Duracao: 152.9s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": {
+      "executados": 0,
+      "sucesso": true,
+      "erro": null
+    }
+  },
+  {
+    "servidor": "Comercio sao pedro - CG",
+    "ip": "192.168.100.254",
+    "sucesso": false,
+    "duracao": "111.1s",
+    "data": "2026-02-27T03:59:15.183Z",
+    "log": [
+      {
+        "ts": "23:57:24",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:57:24",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:57:45",
+        "msg": "Falha na conexao SSH: connect ETIMEDOUT 192.168.100.254:22",
+        "tipo": "erro"
+      },
+      {
+        "ts": "23:57:45",
+        "msg": "Conexao SSH falhou neste servidor",
+        "tipo": "erro"
+      },
+      {
+        "ts": "23:57:45",
+        "msg": "Verificando OpenSSH via WMI/DCOM (192.168.100.254)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:57:45",
+        "msg": "Conectando via WMI (porta 135)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:06",
+        "msg": "Servico sshd ja esta rodando",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:58:06",
+        "msg": "Adicionando regra de firewall (porta 22)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:25",
+        "msg": "Regra de firewall criada",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:58:25",
+        "msg": "Testando conexao SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:31",
+        "msg": "Conexao SSH estabelecida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:58:31",
+        "msg": "Tentando conectar via SSH novamente...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:31",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:58:31",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:33",
+        "msg": "Apache detectado: Apache2.2",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:58:33",
+        "msg": "Parando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:33",
+        "msg": "Aviso ao parar Apache: O servi�o de Apache2.2 n�o foi iniciado.\r\n\r\nPara obter mais ajuda, digite NET HELPMSG 3521.",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:33",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:45",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:58:45",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:59:15",
+        "msg": "ERRO: Falha ao descompactar: Erro desconhecido",
+        "tipo": "erro"
+      },
+      {
+        "ts": "23:59:15",
+        "msg": "Removendo regra de firewall SSH (porta 22)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:59:15",
+        "msg": "Aviso: nao foi possivel remover regra de firewall: Not connected to server",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:59:15",
+        "msg": "Duracao: 111.1s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": null
+  },
+  {
+    "servidor": "Comercio sao pedro - CG",
+    "ip": "192.168.100.254",
+    "sucesso": false,
+    "duracao": "83.8s",
+    "data": "2026-02-27T03:59:13.043Z",
+    "log": [
+      {
+        "ts": "23:57:49",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:57:49",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:10",
+        "msg": "Falha na conexao SSH: connect ETIMEDOUT 192.168.100.254:22",
+        "tipo": "erro"
+      },
+      {
+        "ts": "23:58:10",
+        "msg": "Conexao SSH falhou neste servidor",
+        "tipo": "erro"
+      },
+      {
+        "ts": "23:58:10",
+        "msg": "Verificando OpenSSH via WMI/DCOM (192.168.100.254)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:10",
+        "msg": "Conectando via WMI (porta 135)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:27",
+        "msg": "Servico sshd ja esta rodando",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:58:27",
+        "msg": "Adicionando regra de firewall (porta 22)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:45",
+        "msg": "Regra de firewall criada",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:58:45",
+        "msg": "Testando conexao SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:50",
+        "msg": "Conexao SSH estabelecida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:58:50",
+        "msg": "Tentando conectar via SSH novamente...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:51",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:58:51",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:52",
+        "msg": "Apache detectado: Apache2.2",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:58:52",
+        "msg": "Parando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:52",
+        "msg": "Aviso ao parar Apache: O servi�o de Apache2.2 n�o foi iniciado.\r\n\r\nPara obter mais ajuda, digite NET HELPMSG 3521.",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:52",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:58:53",
+        "msg": "ERRO: Failure",
+        "tipo": "erro"
+      },
+      {
+        "ts": "23:58:53",
+        "msg": "Removendo regra de firewall SSH (porta 22)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:59:13",
+        "msg": "Regra de firewall SSH removida",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:59:13",
+        "msg": "Duracao: 83.8s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": null
+  },
+  {
+    "servidor": "JGW - Rio Brilhante",
+    "ip": "26.237.19.243",
+    "sucesso": true,
+    "duracao": "272.6s",
+    "data": "2026-02-27T03:50:28.578Z",
+    "log": [
+      {
+        "ts": "23:45:55",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:45:55",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:45:56",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:45:56",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:45:58",
+        "msg": "Apache detectado: Apache2.2",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:45:58",
+        "msg": "Parando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:46:01",
+        "msg": "Apache parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:46:01",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:47:46",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:47:46",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:47:55",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:47:55",
+        "msg": "Enviando DLLs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:48:12",
+        "msg": "Arquivo enviado (8.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:48:12",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:48:17",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:48:17",
+        "msg": "Enviando Reports para C:\\f\\WebPrint\\reports...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:49:49",
+        "msg": "Arquivo enviado (48.2 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:49:49",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:50:03",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:50:04",
+        "msg": "Verificando disponibilidade do psql...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:50:04",
+        "msg": "psql disponivel",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:50:04",
+        "msg": "Consultando versao do banco \"primavera\"...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:50:05",
+        "msg": "Versao atual do banco: 2675",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:50:05",
+        "msg": "Nenhum script SQL pendente",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:50:05",
+        "msg": "Iniciando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:50:28",
+        "msg": "Apache2.2 rodando!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:50:28",
+        "msg": "Atualizacao concluida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:50:28",
+        "msg": "Duracao: 272.6s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": {
+      "executados": 0,
+      "sucesso": true,
+      "erro": null
+    }
+  },
+  {
+    "servidor": "JGW - Rio Brilhante",
+    "ip": "26.237.19.243",
+    "sucesso": true,
+    "duracao": "271.0s",
+    "data": "2026-02-27T03:43:12.519Z",
+    "log": [
+      {
+        "ts": "23:38:41",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:38:41",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:38:42",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:38:42",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:38:44",
+        "msg": "Apache detectado: Apache2.2",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:38:44",
+        "msg": "Parando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:38:47",
+        "msg": "Apache parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:38:47",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:40:31",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:40:31",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:40:40",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:40:41",
+        "msg": "Enviando DLLs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:40:57",
+        "msg": "Arquivo enviado (8.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:40:57",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:41:02",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:41:02",
+        "msg": "Enviando Reports para C:\\f\\WebPrint\\reports...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:42:34",
+        "msg": "Arquivo enviado (48.2 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:42:34",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:42:47",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:42:48",
+        "msg": "Verificando disponibilidade do psql...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:42:48",
+        "msg": "psql disponivel",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:42:48",
+        "msg": "Consultando versao do banco \"primavera\"...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:42:49",
+        "msg": "Versao atual do banco: 2675",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:42:49",
+        "msg": "Nenhum script SQL pendente",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:42:49",
+        "msg": "Iniciando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:43:12",
+        "msg": "Apache2.2 rodando!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:43:12",
+        "msg": "Atualizacao concluida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:43:12",
+        "msg": "Duracao: 271.0s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": {
+      "executados": 0,
+      "sucesso": true,
+      "erro": null
+    }
+  },
+  {
+    "servidor": "JGW - Rio Brilhante",
+    "ip": "26.237.19.243",
+    "sucesso": true,
+    "duracao": "270.4s",
+    "data": "2026-02-27T03:34:59.648Z",
+    "log": [
+      {
+        "ts": "23:30:29",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:30:29",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:30:29",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:30:29",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:30:32",
+        "msg": "Apache detectado: Apache2.2",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:30:32",
+        "msg": "Parando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:30:34",
+        "msg": "Apache parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:30:34",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:32:18",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:32:18",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:32:27",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:32:28",
+        "msg": "Enviando DLLs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:32:45",
+        "msg": "Arquivo enviado (8.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:32:45",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:32:49",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:32:50",
+        "msg": "Enviando Reports para C:\\f\\WebPrint\\reports...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:34:21",
+        "msg": "Arquivo enviado (48.2 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:34:21",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:34:34",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:34:35",
+        "msg": "Verificando disponibilidade do psql...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:34:36",
+        "msg": "psql disponivel",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:34:36",
+        "msg": "Consultando versao do banco \"primavera\"...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:34:36",
+        "msg": "Versao atual do banco: 2675",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:34:36",
+        "msg": "Nenhum script SQL pendente",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:34:36",
+        "msg": "Iniciando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "23:34:59",
+        "msg": "Apache2.2 rodando!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:34:59",
+        "msg": "Atualizacao concluida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "23:34:59",
+        "msg": "Duracao: 270.4s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": {
+      "executados": 0,
+      "sucesso": true,
+      "erro": null
+    }
+  },
+  {
+    "servidor": "JGW - Rio Brilhante",
+    "ip": "26.237.19.243",
+    "sucesso": true,
+    "duracao": "274.7s",
+    "data": "2026-02-27T00:42:14.547Z",
+    "log": [
+      {
+        "ts": "20:37:39",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:37:39",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:37:40",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:37:40",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:37:42",
+        "msg": "Apache detectado: Apache2.2",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:37:42",
+        "msg": "Parando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:37:45",
+        "msg": "Apache parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:37:45",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:39:31",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:39:31",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:39:40",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:39:40",
+        "msg": "Enviando DLLs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:39:57",
+        "msg": "Arquivo enviado (8.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:39:57",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:40:02",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:40:02",
+        "msg": "Enviando Reports para C:\\f\\WebPrint\\reports...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:41:35",
+        "msg": "Arquivo enviado (48.2 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:41:35",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:41:49",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:41:50",
+        "msg": "Verificando disponibilidade do psql...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:41:50",
+        "msg": "psql disponivel",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:41:50",
+        "msg": "Consultando versao do banco \"primavera\"...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:41:51",
+        "msg": "Versao atual do banco: 2675",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:41:51",
+        "msg": "Nenhum script SQL pendente",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:41:51",
+        "msg": "Iniciando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:42:14",
+        "msg": "Apache2.2 rodando!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:42:14",
+        "msg": "Atualizacao concluida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:42:14",
+        "msg": "Duracao: 274.7s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": {
+      "executados": 0,
+      "sucesso": true,
+      "erro": null
+    }
+  },
+  {
+    "servidor": "JGW - Rio Brilhante",
+    "ip": "26.237.19.243",
+    "sucesso": true,
+    "duracao": "274.3s",
+    "data": "2026-02-27T00:16:46.920Z",
+    "log": [
+      {
+        "ts": "20:12:12",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:12:12",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:12:13",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:12:13",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:12:15",
+        "msg": "Apache detectado: Apache2.2",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:12:15",
+        "msg": "Parando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:12:18",
+        "msg": "Apache parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:12:18",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:14:03",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:14:03",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:14:12",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:14:13",
+        "msg": "Enviando DLLs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:14:29",
+        "msg": "Arquivo enviado (8.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:14:29",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:14:34",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:14:34",
+        "msg": "Enviando Reports para C:\\f\\WebPrint\\reports...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:16:06",
+        "msg": "Arquivo enviado (48.2 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:16:06",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:16:19",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:16:19",
+        "msg": "Verificando disponibilidade do psql...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:16:20",
+        "msg": "psql disponivel",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:16:20",
+        "msg": "Consultando versao do banco \"primavera\"...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:16:21",
+        "msg": "Versao atual do banco: 2675",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:16:21",
+        "msg": "Nenhum script SQL pendente",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:16:21",
+        "msg": "Iniciando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "20:16:46",
+        "msg": "Apache2.2 rodando!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:16:46",
+        "msg": "Atualizacao concluida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "20:16:46",
+        "msg": "Duracao: 274.3s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": {
+      "executados": 0,
+      "sucesso": true,
+      "erro": null
+    }
+  },
+  {
+    "servidor": "Comercio sao pedro - CG",
+    "ip": "192.168.100.254",
+    "sucesso": true,
+    "duracao": "80.8s",
+    "data": "2026-02-26T21:56:51.390Z",
+    "log": [
+      {
+        "ts": "17:55:30",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:55:30",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:55:31",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:55:31",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:55:33",
+        "msg": "Apache detectado: Apache2.2",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:55:33",
+        "msg": "Parando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:55:33",
+        "msg": "Aviso ao parar Apache: O servi�o de Apache2.2 n�o foi iniciado.\r\n\r\nPara obter mais ajuda, digite NET HELPMSG 3521.",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:55:33",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:55:47",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:55:47",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:56:02",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:56:02",
+        "msg": "Enviando DLLs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:56:05",
+        "msg": "Arquivo enviado (8.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:56:05",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:56:12",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:56:12",
+        "msg": "Enviando Reports para C:\\f\\WebPrint\\reports...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:56:24",
+        "msg": "Arquivo enviado (48.2 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:56:24",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:56:46",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:56:46",
+        "msg": "Verificando disponibilidade do psql...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:56:47",
+        "msg": "psql disponivel",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:56:47",
+        "msg": "Consultando versao do banco comercio_sp_pg18...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:56:47",
+        "msg": "Versao atual do banco: 2675",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:56:47",
+        "msg": "Nenhum script SQL pendente",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:56:47",
+        "msg": "Iniciando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:56:51",
+        "msg": "AVISO: Apache2.2 pode nao ter iniciado corretamente",
+        "tipo": "erro"
+      },
+      {
+        "ts": "17:56:51",
+        "msg": "Atualizacao concluida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:56:51",
+        "msg": "Duracao: 80.8s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": {
+      "executados": 0,
+      "sucesso": true,
+      "erro": null
+    }
+  },
+  {
+    "servidor": "Comercio sao pedro - CG",
+    "ip": "192.168.100.254",
+    "sucesso": true,
+    "duracao": "95.0s",
+    "data": "2026-02-26T21:44:18.089Z",
+    "log": [
+      {
+        "ts": "17:42:43",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:42:43",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:42:43",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:42:43",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:42:45",
+        "msg": "Apache detectado: Apache2.2",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:42:45",
+        "msg": "Parando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:42:46",
+        "msg": "Aviso ao parar Apache: O servi�o de Apache2.2 n�o foi iniciado.\r\n\r\nPara obter mais ajuda, digite NET HELPMSG 3521.",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:42:46",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:42:55",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:42:55",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:43:09",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:43:09",
+        "msg": "Enviando DLLs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:43:11",
+        "msg": "Arquivo enviado (8.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:43:11",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:43:19",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:43:19",
+        "msg": "Enviando Reports para C:\\f\\WebPrint\\reports...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:43:33",
+        "msg": "Arquivo enviado (48.2 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:43:33",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:44:12",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:44:13",
+        "msg": "Verificando disponibilidade do psql...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:44:14",
+        "msg": "psql disponivel",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:44:14",
+        "msg": "Consultando versao do banco comercio_sp_pg18...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:44:14",
+        "msg": "Versao atual do banco: 2675",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:44:14",
+        "msg": "Nenhum script SQL pendente",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:44:14",
+        "msg": "Iniciando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "17:44:18",
+        "msg": "AVISO: Apache2.2 pode nao ter iniciado corretamente",
+        "tipo": "erro"
+      },
+      {
+        "ts": "17:44:18",
+        "msg": "Atualizacao concluida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "17:44:18",
+        "msg": "Duracao: 95.0s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": {
+      "executados": 0,
+      "sucesso": true,
+      "erro": null
+    }
+  },
+  {
+    "servidor": "Comercio sao pedro - CG",
+    "ip": "192.168.100.254",
+    "sucesso": true,
+    "duracao": "81.1s",
+    "data": "2026-02-26T20:42:00.724Z",
+    "log": [
+      {
+        "ts": "16:40:39",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:40:39",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:40:40",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:40:40",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:40:43",
+        "msg": "Apache detectado: Apache2.2",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:40:43",
+        "msg": "Parando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:40:43",
+        "msg": "Aviso ao parar Apache: O servi�o de Apache2.2 n�o foi iniciado.\r\n\r\nPara obter mais ajuda, digite NET HELPMSG 3521.",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:40:43",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:40:51",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:40:51",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:41:06",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:41:06",
+        "msg": "Enviando DLLs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:41:08",
+        "msg": "Arquivo enviado (8.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:41:08",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:41:17",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:41:18",
+        "msg": "Enviando Reports para C:\\f\\WebPrint\\reports...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:41:26",
+        "msg": "Arquivo enviado (48.2 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:41:26",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:41:51",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:41:52",
+        "msg": "Verificando disponibilidade do psql...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:41:52",
+        "msg": "psql disponivel",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:41:52",
+        "msg": "Consultando versao do banco comercio_sp_pg18...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:41:53",
+        "msg": "Versao atual do banco: 2672",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:41:53",
+        "msg": "3 script(s) pendente(s) (v2673 a v2675)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:41:53",
+        "msg": "Executando script v2673: Scripts 2026\\2026-02-20 Alfredo.txt (1/3)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:41:54",
+        "msg": "Script v2673 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:41:54",
+        "msg": "Executando script v2674: Scripts 2026\\2026-02-21 Gabriel.txt (2/3)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:41:55",
+        "msg": "Script v2674 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:41:55",
+        "msg": "Executando script v2675: Scripts 2026\\2026-02-22 Adriano.txt (3/3)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:41:56",
+        "msg": "Script v2675 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:41:57",
+        "msg": "Todos os 3 script(s) executados com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:41:57",
+        "msg": "Iniciando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:42:00",
+        "msg": "AVISO: Apache2.2 pode nao ter iniciado corretamente",
+        "tipo": "erro"
+      },
+      {
+        "ts": "16:42:00",
+        "msg": "Atualizacao concluida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:42:00",
+        "msg": "Duracao: 81.1s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": {
+      "executados": 3,
+      "sucesso": true,
+      "erro": null,
+      "versaoInicial": 2672,
+      "versaoFinal": 2675
+    }
+  },
+  {
+    "servidor": "Frigo - Duarte - SP",
+    "ip": "26.59.213.82",
+    "sucesso": true,
+    "duracao": "295.7s",
+    "data": "2026-02-26T20:30:23.693Z",
+    "log": [
+      {
+        "ts": "16:25:28",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:25:28",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:25:49",
+        "msg": "Falha na conexao SSH: connect ETIMEDOUT 26.59.213.82:22",
+        "tipo": "erro"
+      },
+      {
+        "ts": "16:25:49",
+        "msg": "Conexao SSH falhou neste servidor",
+        "tipo": "erro"
+      },
+      {
+        "ts": "16:25:49",
+        "msg": "Verificando OpenSSH via WMI/DCOM (26.59.213.82)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:25:49",
+        "msg": "Conectando via WMI (porta 135)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:26:16",
+        "msg": "Servico sshd existe mas esta PARADO",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:26:16",
+        "msg": "Iniciando servico sshd...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:26:54",
+        "msg": "Servico sshd iniciado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:26:54",
+        "msg": "Testando conexao SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:26:59",
+        "msg": "Conexao SSH estabelecida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:26:59",
+        "msg": "Tentando conectar via SSH novamente...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:27:00",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:27:00",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:27:02",
+        "msg": "Apache detectado: Apache2.4",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:27:02",
+        "msg": "Parando servico Apache2.4...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:27:32",
+        "msg": "Apache parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:27:32",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:28:32",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:28:32",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:28:46",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:28:46",
+        "msg": "Enviando DLLs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:28:56",
+        "msg": "Arquivo enviado (8.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:28:56",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:29:03",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:29:03",
+        "msg": "Enviando Reports para C:\\f\\WebPrint\\reports...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:29:56",
+        "msg": "Arquivo enviado (48.2 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:29:56",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:30:11",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:30:11",
+        "msg": "Verificando disponibilidade do psql...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:30:12",
+        "msg": "psql disponivel",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:30:12",
+        "msg": "Consultando versao do banco frigoduarte...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:30:12",
+        "msg": "Versao atual do banco: 2669",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:30:12",
+        "msg": "6 script(s) pendente(s) (v2670 a v2675)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:30:13",
+        "msg": "Executando script v2670: Scripts 2026\\2026-02-17 Tanaka.txt (1/6)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:30:14",
+        "msg": "Script v2670 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:30:14",
+        "msg": "Executando script v2671: Scripts 2026\\2026-02-18 Kleber.txt (2/6)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:30:15",
+        "msg": "Script v2671 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:30:15",
+        "msg": "Executando script v2672: Scripts 2026\\2026-02-19 Alfredo.txt (3/6)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:30:16",
+        "msg": "Script v2672 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:30:16",
+        "msg": "Executando script v2673: Scripts 2026\\2026-02-20 Alfredo.txt (4/6)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:30:17",
+        "msg": "Script v2673 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:30:17",
+        "msg": "Executando script v2674: Scripts 2026\\2026-02-21 Gabriel.txt (5/6)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:30:18",
+        "msg": "Script v2674 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:30:18",
+        "msg": "Executando script v2675: Scripts 2026\\2026-02-22 Adriano.txt (6/6)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:30:19",
+        "msg": "Script v2675 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:30:20",
+        "msg": "Todos os 6 script(s) executados com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:30:20",
+        "msg": "Iniciando servico Apache2.4...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:30:23",
+        "msg": "Apache2.4 rodando!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:30:23",
+        "msg": "Atualizacao concluida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:30:23",
+        "msg": "Duracao: 295.7s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": {
+      "executados": 6,
+      "sucesso": true,
+      "erro": null,
+      "versaoInicial": 2669,
+      "versaoFinal": 2675
+    }
+  },
+  {
+    "servidor": "JGW - Rio Brilhante",
+    "ip": "26.237.19.243",
+    "sucesso": true,
+    "duracao": "279.8s",
+    "data": "2026-02-26T20:18:07.640Z",
+    "log": [
+      {
+        "ts": "16:13:27",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:13:27",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:13:28",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:13:28",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:13:30",
+        "msg": "Apache detectado: Apache2.2",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:13:30",
+        "msg": "Parando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:13:33",
+        "msg": "Apache parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:13:33",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:15:21",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:15:21",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:15:30",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:15:30",
+        "msg": "Enviando DLLs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:15:49",
+        "msg": "Arquivo enviado (8.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:15:49",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:15:54",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:15:55",
+        "msg": "Enviando Reports para C:\\f\\WebPrint\\reports...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:17:29",
+        "msg": "Arquivo enviado (48.2 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:17:29",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:17:43",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:17:43",
+        "msg": "Verificando disponibilidade do psql...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:17:44",
+        "msg": "psql disponivel",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:17:44",
+        "msg": "Consultando versao do banco primavera...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:17:44",
+        "msg": "Versao atual do banco: 2675",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:17:44",
+        "msg": "Nenhum script SQL pendente",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:17:44",
+        "msg": "Iniciando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "16:18:07",
+        "msg": "Apache2.2 rodando!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:18:07",
+        "msg": "Atualizacao concluida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "16:18:07",
+        "msg": "Duracao: 279.8s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": {
+      "executados": 0,
+      "sucesso": true,
+      "erro": null
+    }
+  },
+  {
+    "servidor": "JGW - Rio Brilhante",
+    "ip": "26.237.19.243",
+    "sucesso": true,
+    "duracao": "447.9s",
+    "data": "2026-02-26T19:59:50.759Z",
+    "log": [
+      {
+        "ts": "15:52:22",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:52:22",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:52:43",
+        "msg": "Falha na conexao SSH: connect ETIMEDOUT 26.237.19.243:22",
+        "tipo": "erro"
+      },
+      {
+        "ts": "15:52:43",
+        "msg": "Conexao SSH falhou neste servidor",
+        "tipo": "erro"
+      },
+      {
+        "ts": "15:52:43",
+        "msg": "Verificando OpenSSH via WMI/DCOM (26.237.19.243)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:52:43",
+        "msg": "Conectando via WMI (porta 135)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:53:13",
+        "msg": "Servico sshd existe mas esta PARADO",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:53:13",
+        "msg": "Iniciando servico sshd...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:53:57",
+        "msg": "Servico sshd iniciado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:53:57",
+        "msg": "Testando conexao SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:54:03",
+        "msg": "Conexao SSH estabelecida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:54:03",
+        "msg": "Tentando conectar via SSH novamente...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:54:04",
+        "msg": "Conectado!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:54:04",
+        "msg": "Detectando servico Apache...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:54:06",
+        "msg": "Apache detectado: Apache2.2",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:54:06",
+        "msg": "Parando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:54:09",
+        "msg": "Apache parado",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:54:09",
+        "msg": "Enviando EXEs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:55:57",
+        "msg": "Arquivo enviado (54.6 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:55:57",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:56:07",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:56:07",
+        "msg": "Enviando DLLs para C:\\f\\Webfrigo...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:56:24",
+        "msg": "Arquivo enviado (8.3 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:56:24",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:56:29",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:56:30",
+        "msg": "Enviando Reports para C:\\f\\WebPrint\\reports...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:06",
+        "msg": "Arquivo enviado (48.2 MB)",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:06",
+        "msg": "Descompactando no servidor...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:20",
+        "msg": "Descompactado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:21",
+        "msg": "Verificando disponibilidade do psql...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:21",
+        "msg": "psql disponivel",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:21",
+        "msg": "Consultando versao do banco primavera...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:22",
+        "msg": "Versao atual do banco: 2639",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:22",
+        "msg": "36 script(s) pendente(s) (v2640 a v2675)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:22",
+        "msg": "Executando script v2640: Scripts 2026\\2026-01-17 Kleber.txt (1/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:24",
+        "msg": "Script v2640 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:24",
+        "msg": "Executando script v2641: Scripts 2026\\2026-01-18 Adriano.txt (2/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:25",
+        "msg": "Script v2641 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:26",
+        "msg": "Executando script v2642: Scripts 2026\\2026-01-19 Gabriel.txt (3/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:27",
+        "msg": "Script v2642 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:28",
+        "msg": "Executando script v2643: Scripts 2026\\2026-01-20 Altemar.txt (4/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:29",
+        "msg": "Script v2643 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:29",
+        "msg": "Executando script v2644: Scripts 2026\\2026-01-21 Kleber.txt (5/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:31",
+        "msg": "Script v2644 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:31",
+        "msg": "Executando script v2645: Scripts 2026\\2026-01-22 Kleber.txt (6/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:32",
+        "msg": "Script v2645 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:33",
+        "msg": "Executando script v2646: Scripts 2026\\2026-01-23 Kleber.txt (7/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:34",
+        "msg": "Script v2646 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:35",
+        "msg": "Executando script v2647: Scripts 2026\\2026-01-24 Kleber.txt (8/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:36",
+        "msg": "Script v2647 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:36",
+        "msg": "Executando script v2648: Scripts 2026\\2026-01-25 Hendrios.txt (9/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:37",
+        "msg": "Script v2648 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:38",
+        "msg": "Executando script v2649: Scripts 2026\\2026-01-26 Gabriel.txt (10/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:39",
+        "msg": "Script v2649 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:39",
+        "msg": "Executando script v2650: Scripts 2026\\2026-01-27 Altemar.txt (11/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:41",
+        "msg": "Script v2650 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:41",
+        "msg": "Executando script v2651: Scripts 2026\\2026-01-28 Kleber.txt (12/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:42",
+        "msg": "Script v2651 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:43",
+        "msg": "Executando script v2652: Scripts 2026\\2026-01-29 Kleber.txt (13/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:44",
+        "msg": "Script v2652 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:44",
+        "msg": "Executando script v2653: Scripts 2026\\2026-01-30 Tanaka.txt (14/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:46",
+        "msg": "Script v2653 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:46",
+        "msg": "Executando script v2654: Scripts 2026\\2026-01-31 Gabriel.txt (15/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:47",
+        "msg": "Script v2654 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:48",
+        "msg": "Executando script v2655: Scripts 2026\\2026-02-01 Dinho.txt (16/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:49",
+        "msg": "Script v2655 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:49",
+        "msg": "Executando script v2656: Scripts 2026\\2026-02-02 Kleber.txt (17/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:51",
+        "msg": "Script v2656 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:51",
+        "msg": "Executando script v2657: Scripts 2026\\2026-02-03 Tanaka.txt (18/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:52",
+        "msg": "Script v2657 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:53",
+        "msg": "Executando script v2658: Scripts 2026\\2026-02-04 Altemar.txt (19/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:54",
+        "msg": "Script v2658 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:54",
+        "msg": "Executando script v2659: Scripts 2026\\2026-02-05 Kleber.txt (20/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:56",
+        "msg": "Script v2659 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:56",
+        "msg": "Executando script v2660: Scripts 2026\\2026-02-06 Tanaka.txt (21/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:58:57",
+        "msg": "Script v2660 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:58:58",
+        "msg": "Executando script v2661: Scripts 2026\\2026-02-08 Altemar.txt (22/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:00",
+        "msg": "Script v2661 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:00",
+        "msg": "Executando script v2662: Scripts 2026\\2026-02-09 Kleber.txt (23/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:02",
+        "msg": "Script v2662 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:02",
+        "msg": "Executando script v2663: Scripts 2026\\2026-02-10 Kleber.txt (24/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:04",
+        "msg": "Script v2663 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:04",
+        "msg": "Executando script v2664: Scripts 2026\\2026-02-11 Tanaka.txt (25/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:05",
+        "msg": "Script v2664 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:05",
+        "msg": "Executando script v2665: Scripts 2026\\2026-02-12 Kleber.txt (26/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:07",
+        "msg": "Script v2665 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:07",
+        "msg": "Executando script v2666: Scripts 2026\\2026-02-13 Tanaka.txt (27/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:08",
+        "msg": "Script v2666 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:09",
+        "msg": "Executando script v2667: Scripts 2026\\2026-02-14 Adriano.txt (28/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:10",
+        "msg": "Script v2667 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:10",
+        "msg": "Executando script v2668: Scripts 2026\\2026-02-15 Kleber.txt (29/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:12",
+        "msg": "Script v2668 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:12",
+        "msg": "Executando script v2669: Scripts 2026\\2026-02-16 Kleber.txt (30/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:13",
+        "msg": "Script v2669 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:14",
+        "msg": "Executando script v2670: Scripts 2026\\2026-02-17 Tanaka.txt (31/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:15",
+        "msg": "Script v2670 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:15",
+        "msg": "Executando script v2671: Scripts 2026\\2026-02-18 Kleber.txt (32/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:17",
+        "msg": "Script v2671 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:17",
+        "msg": "Executando script v2672: Scripts 2026\\2026-02-19 Alfredo.txt (33/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:18",
+        "msg": "Script v2672 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:19",
+        "msg": "Executando script v2673: Scripts 2026\\2026-02-20 Alfredo.txt (34/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:20",
+        "msg": "Script v2673 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:20",
+        "msg": "Executando script v2674: Scripts 2026\\2026-02-21 Gabriel.txt (35/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:22",
+        "msg": "Script v2674 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:22",
+        "msg": "Executando script v2675: Scripts 2026\\2026-02-22 Adriano.txt (36/36)",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:24",
+        "msg": "Script v2675 executado com sucesso",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:24",
+        "msg": "Todos os 36 script(s) executados com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:24",
+        "msg": "Iniciando servico Apache2.2...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:59:50",
+        "msg": "Apache2.2 rodando!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:50",
+        "msg": "Atualizacao concluida com sucesso!",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:59:50",
+        "msg": "Duracao: 447.9s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": {
+      "executados": 36,
+      "sucesso": true,
+      "erro": null,
+      "versaoInicial": 2639,
+      "versaoFinal": 2675
+    }
+  },
+  {
+    "servidor": "JGW - Rio Brilhante",
+    "ip": "26.237.19.243",
+    "sucesso": false,
+    "duracao": "78.4s",
+    "data": "2026-02-26T19:44:07.124Z",
+    "log": [
+      {
+        "ts": "15:42:48",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:42:48",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:43:09",
+        "msg": "Falha na conexao SSH: connect ETIMEDOUT 26.237.19.243:22",
+        "tipo": "erro"
+      },
+      {
+        "ts": "15:43:09",
+        "msg": "Conexao SSH falhou neste servidor",
+        "tipo": "erro"
+      },
+      {
+        "ts": "15:43:09",
+        "msg": "Verificando OpenSSH via WMI/DCOM (26.237.19.243)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:43:09",
+        "msg": "Conectando via WMI (porta 135)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:43:41",
+        "msg": "Servico sshd existe mas esta PARADO",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:43:41",
+        "msg": "Iniciando servico sshd...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:44:07",
+        "msg": "Falha ao iniciar sshd: ERRO:N�o � poss�vel localizar um par�metro que coincida com o nome de par�metro 'Filter'.",
+        "tipo": "erro"
+      },
+      {
+        "ts": "15:44:07",
+        "msg": "Verifique se o login e senha do Windows estao corretos nas configuracoes do servidor",
+        "tipo": "erro"
+      },
+      {
+        "ts": "15:44:07",
+        "msg": "ERRO: connect ETIMEDOUT 26.237.19.243:22",
+        "tipo": "erro"
+      },
+      {
+        "ts": "15:44:07",
+        "msg": "Duracao: 78.4s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": null
+  },
+  {
+    "servidor": "JGW - Rio Brilhante",
+    "ip": "26.237.19.243",
+    "sucesso": false,
+    "duracao": "45.9s",
+    "data": "2026-02-26T19:19:26.526Z",
+    "log": [
+      {
+        "ts": "15:18:40",
+        "msg": "Versao 1.0 — EXEs: 54.6 MB, DLLs: 8.3 MB, Reports: 48.2 MB",
+        "tipo": "sucesso"
+      },
+      {
+        "ts": "15:18:40",
+        "msg": "Conectando via SSH...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:19:01",
+        "msg": "Falha na conexao SSH: connect ETIMEDOUT 26.237.19.243:22",
+        "tipo": "erro"
+      },
+      {
+        "ts": "15:19:01",
+        "msg": "Conexao SSH falhou neste servidor",
+        "tipo": "erro"
+      },
+      {
+        "ts": "15:19:01",
+        "msg": "Verificando OpenSSH via WMI/DCOM (26.237.19.243)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:19:01",
+        "msg": "Conectando via WMI (porta 135)...",
+        "tipo": "progresso"
+      },
+      {
+        "ts": "15:19:26",
+        "msg": "Erro ao conectar via WMI: Acesso negado.",
+        "tipo": "erro"
+      },
+      {
+        "ts": "15:19:26",
+        "msg": "ERRO: connect ETIMEDOUT 26.237.19.243:22",
+        "tipo": "erro"
+      },
+      {
+        "ts": "15:19:26",
+        "msg": "Duracao: 45.9s",
+        "tipo": "info"
+      }
+    ],
+    "scripts": null
+  }
+]
