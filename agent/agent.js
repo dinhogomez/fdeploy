@@ -471,20 +471,122 @@ function fixOpenSSHInstalar() {
     return { ok: true, descricao: 'OpenSSH ja esta instalado' };
   }
 
-  // Instalar via DISM
+  // Metodo 1: DISM (Windows 10+ / Server 2016+)
+  log('INFO', 'Tentando instalar via DISM...');
   const result = execCmd('dism /Online /Add-Capability /CapabilityName:OpenSSH.Server~~~~0.0.1.0', 120000);
-  if (!result.ok) {
-    // Tentar via PowerShell Add-WindowsCapability
-    const psResult = execPowerShell('Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0', 120000);
-    if (!psResult.ok) {
-      log('ERRO', `OpenSSH instalacao falhou: ${psResult.error || result.error}`);
-      return { ok: false, erro: psResult.error || result.error };
-    }
+  if (result.ok) {
+    return finalizarOpenSSH();
+  }
+  log('INFO', `DISM nao disponivel: ${(result.error || '').substring(0, 100)}`);
+
+  // Metodo 2: PowerShell Add-WindowsCapability (Windows 10+ / Server 2016+)
+  log('INFO', 'Tentando via PowerShell Add-WindowsCapability...');
+  const psResult = execPowerShell('Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0', 120000);
+  if (psResult.ok) {
+    return finalizarOpenSSH();
+  }
+  log('INFO', `Add-WindowsCapability nao disponivel: ${(psResult.error || '').substring(0, 100)}`);
+
+  // Metodo 3: Download manual do Win32-OpenSSH (Windows antigo / Server 2012 R2)
+  log('INFO', 'Tentando download manual do Win32-OpenSSH do GitHub...');
+  return instalarOpenSSHManual();
+}
+
+function instalarOpenSSHManual() {
+  const sshDir = 'C:\\Program Files\\OpenSSH-Win64';
+  const zipPath = 'C:\\temp\\OpenSSH-Win64.zip';
+
+  // Criar diretorio temp
+  execCmd('mkdir C:\\temp 2>nul');
+
+  // Download via PowerShell WebClient (funciona no PS 2.0+)
+  log('INFO', 'Baixando OpenSSH-Win64.zip...');
+  const dlScript = [
+    '[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12',
+    `(New-Object Net.WebClient).DownloadFile('https://github.com/PowerShell/Win32-OpenSSH/releases/latest/download/OpenSSH-Win64.zip', '${zipPath}')`
+  ].join('; ');
+
+  const dl = execPowerShell(dlScript, 180000);
+  if (!dl.ok) {
+    log('ERRO', `Download OpenSSH falhou: ${dl.error}`);
+    return { ok: false, erro: `Download do OpenSSH falhou (sem internet?): ${(dl.error || '').substring(0, 200)}` };
+  }
+  log('INFO', 'Download concluido');
+
+  // Remover diretorio antigo se existir
+  execPowerShell(`if (Test-Path '${sshDir}') { Remove-Item -Path '${sshDir}' -Recurse -Force }`);
+
+  // Extrair ZIP (System.IO.Compression disponivel no .NET 4.5+ = Server 2012 R2)
+  log('INFO', 'Extraindo ZIP...');
+  const extractScript = [
+    'Add-Type -AssemblyName System.IO.Compression.FileSystem',
+    `[System.IO.Compression.ZipFile]::ExtractToDirectory('${zipPath}', 'C:\\Program Files')`
+  ].join('; ');
+
+  const ext = execPowerShell(extractScript, 60000);
+  if (!ext.ok) {
+    log('ERRO', `Extracao OpenSSH falhou: ${ext.error}`);
+    return { ok: false, erro: `Extracao falhou: ${(ext.error || '').substring(0, 200)}` };
+  }
+  log('INFO', 'Extracao concluida');
+
+  // Executar install-sshd.ps1
+  log('INFO', 'Executando install-sshd.ps1...');
+  const install = execPowerShell(`& '${sshDir}\\install-sshd.ps1'`, 60000);
+  if (!install.ok) {
+    log('ERRO', `install-sshd.ps1 falhou: ${install.error}`);
+    return { ok: false, erro: `install-sshd.ps1 falhou: ${(install.error || '').substring(0, 200)}` };
+  }
+  log('INFO', `install-sshd.ps1: ${install.output || 'OK'}`);
+
+  // Gerar chaves do host se nao existirem
+  const keygen = path.join(sshDir, 'ssh-keygen.exe');
+  const hostkeyDir = path.join(sshDir);
+  if (!fs.existsSync(path.join(hostkeyDir, 'ssh_host_ed25519_key'))) {
+    log('INFO', 'Gerando chaves do host...');
+    execCmd(`"${keygen}" -A`, 30000);
   }
 
+  // Ajustar permissoes das chaves (necessario no Win32-OpenSSH manual)
+  log('INFO', 'Ajustando permissoes...');
+  const fixPermsScript = `
+    $sshDir = '${sshDir.replace(/\\/g, '\\\\')}';
+    $acl = Get-Acl "$sshDir\\ssh_host_ed25519_key" -ErrorAction SilentlyContinue;
+    if ($acl) {
+      $acl.SetAccessRuleProtection($true, $false);
+      $rule = New-Object System.Security.AccessControl.FileSystemAccessRule('SYSTEM','FullControl','Allow');
+      $acl.AddAccessRule($rule);
+      $rule2 = New-Object System.Security.AccessControl.FileSystemAccessRule('Administrators','FullControl','Allow');
+      $acl.AddAccessRule($rule2);
+      Set-Acl "$sshDir\\ssh_host_ed25519_key" $acl -ErrorAction SilentlyContinue;
+      Set-Acl "$sshDir\\ssh_host_rsa_key" $acl -ErrorAction SilentlyContinue
+    }
+  `.replace(/\n/g, ' ').trim();
+  execPowerShell(fixPermsScript, 15000);
+
+  // Adicionar ao PATH do sistema
+  log('INFO', 'Adicionando ao PATH...');
+  const pathScript = [
+    `$p = [Environment]::GetEnvironmentVariable('Path','Machine')`,
+    `if ($p -notlike '*${sshDir}*') { [Environment]::SetEnvironmentVariable('Path', $p + ';${sshDir}', 'Machine') }`
+  ].join('; ');
+  execPowerShell(pathScript, 15000);
+
+  // Limpar ZIP
+  execCmd(`del "${zipPath}" 2>nul`);
+
+  return finalizarOpenSSH();
+}
+
+function finalizarOpenSSH() {
   // Iniciar e definir como automatico
   execCmd('sc config sshd start= auto');
-  execCmd('net start sshd');
+  const startResult = execCmd('net start sshd');
+  if (startResult.ok) {
+    log('INFO', 'Servico sshd iniciado');
+  } else {
+    log('INFO', `net start sshd: ${startResult.error || startResult.output || 'sem output'}`);
+  }
 
   // Abrir firewall
   fixFirewall(22, 'OpenSSH Server (sshd)');
@@ -586,15 +688,28 @@ function fixPsqlPath(caminho) {
 // SELF-UPDATE
 // ══════════════════════════════════════════
 
-function selfUpdate(binaryBuffer) {
-  log('INFO', `>>> SELF-UPDATE: Recebido binario de ${(binaryBuffer.length / 1024 / 1024).toFixed(1)} MB`);
+function selfUpdate(binaryBuffer, autoRestart) {
+  log('INFO', `>>> SELF-UPDATE: Recebido binario de ${(binaryBuffer.length / 1024 / 1024).toFixed(1)} MB (autoRestart=${!!autoRestart})`);
+  const currentExe = process.execPath;
   const newExe = path.join(APP_ROOT, 'agent_new.exe');
+  const oldExe = path.join(APP_ROOT, 'agent_old.exe');
 
   try {
-    // Salvar novo binario (servidor vai controlar o restart via SSH)
     fs.writeFileSync(newExe, binaryBuffer);
-    log('INFO', 'Self-update: binario salvo como agent_new.exe, aguardando restart externo');
-    return { ok: true, descricao: 'Binario salvo, aguardando restart' };
+    log('INFO', 'Self-update: binario salvo como agent_new.exe');
+
+    if (autoRestart) {
+      // Trocar binarios e sair — NSSM reinicia automaticamente
+      log('INFO', 'Self-update: trocando binarios e reiniciando via NSSM...');
+      try { fs.unlinkSync(oldExe); } catch (_) {}
+      try { fs.renameSync(currentExe, oldExe); } catch (_) {}
+      fs.renameSync(newExe, currentExe);
+      log('INFO', 'Self-update: binarios trocados, saindo para NSSM reiniciar...');
+      setTimeout(() => process.exit(0), 500);
+      return { ok: true, descricao: 'Binario trocado, reiniciando via NSSM...' };
+    }
+
+    return { ok: true, descricao: 'Binario salvo, aguardando restart externo' };
   } catch (e) {
     log('ERRO', `Self-update falhou: ${e.message}`);
     return { ok: false, erro: e.message };
@@ -721,7 +836,8 @@ async function handleUpdate(req, res, params, body) {
   if (!Buffer.isBuffer(body) || body.length < 1000) {
     return jsonResponse(res, 400, { ok: false, erro: 'Binario invalido ou muito pequeno' });
   }
-  jsonResponse(res, 200, selfUpdate(body));
+  const autoRestart = params.get('autoRestart') === '1';
+  jsonResponse(res, 200, selfUpdate(body, autoRestart));
 }
 
 function handleConfig(req, res) {

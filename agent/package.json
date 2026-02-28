@@ -1,6 +1,6 @@
 {
   "name": "fdeploy-agent",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "FDeploy Agent - API auxiliar para servidores remotos",
   "main": "agent.js",
   "bin": "agent.js",

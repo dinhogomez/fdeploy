@@ -2559,9 +2559,9 @@ async function fixItem(tipo) {
   if (!diagModalServidorId) return;
   const id = diagModalServidorId;
 
-  // psql usa rota SSE com log em tempo real
-  if (tipo === 'psql') {
-    fixPsqlStream(id);
+  // Operacoes longas usam rota SSE com log em tempo real
+  if (tipo === 'psql' || tipo === 'openssh') {
+    fixStreamGeneric(id, tipo);
     return;
   }
 
@@ -2593,25 +2593,26 @@ async function fixItem(tipo) {
   }
 }
 
-function fixPsqlStream(id) {
+function fixStreamGeneric(id, tipo) {
+  const titulos = { psql: 'Instalando psql', openssh: 'Instalando OpenSSH' };
   const allServs = todosServidores.length ? todosServidores : todosServidoresGeral;
   const srv = allServs.find(s => s.id === id);
   const nome = srv ? srv.nome : id;
 
   // Substituir conteudo do diagModal com log
-  document.getElementById('diagModalTitle').textContent = `Instalando psql — ${esc(nome)}`;
+  document.getElementById('diagModalTitle').textContent = `${titulos[tipo] || tipo} — ${esc(nome)}`;
   document.getElementById('diagModalSubtitle').textContent = srv ? `${srv.ip}:${srv.porta}` : '';
-  document.getElementById('diagModalContent').innerHTML = '<div class="deploy-log visible" id="psqlFixLog"></div>';
+  document.getElementById('diagModalContent').innerHTML = '<div class="deploy-log visible" id="fixStreamLog"></div>';
   document.getElementById('diagModalActions').style.display = 'none';
 
-  const logEl = document.getElementById('psqlFixLog');
+  const logEl = document.getElementById('fixStreamLog');
   function appendLog(msg, tipo) {
     const ts = new Date().toLocaleTimeString('pt-BR');
     logEl.innerHTML += `<div class="log-${tipo || 'info'}">[${ts}] ${msg}</div>`;
     logEl.scrollTop = logEl.scrollHeight;
   }
 
-  const evtSource = new EventSource(`/api/agent/${id}/fix/psql/stream`);
+  const evtSource = new EventSource(`/api/agent/${id}/fix/${tipo}/stream`);
 
   evtSource.onmessage = (e) => {
     try {
@@ -2620,7 +2621,7 @@ function fixPsqlStream(id) {
         appendLog(data.msg, data.tipo);
       } else if (data.evento === 'concluido') {
         evtSource.close();
-        appendLog(data.ok ? data.descricao : data.descricao, data.ok ? 'sucesso' : 'erro');
+        appendLog(data.descricao, data.ok ? 'sucesso' : 'erro');
         // Mostrar botoes: Fechar + Re-diagnosticar
         document.getElementById('diagModalActions').style.display = 'flex';
         document.getElementById('diagModalActions').innerHTML = `
