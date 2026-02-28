@@ -2280,9 +2280,16 @@ function renderAgentPanel(s) {
   }
   // Agent instalado mas offline
   if (st.temAgent) {
+    if (st._testando) {
+      return `<div class="agent-panel agent-panel-offline agent-testando">
+        <span class="spinner"></span>
+        <span class="agent-panel-label">Testando conexao...</span>
+      </div>`;
+    }
     return `<div class="agent-panel agent-panel-offline">
       <span class="status-dot status-stopped"></span>
       <span class="agent-panel-label">Agent offline</span>
+      <button class="btn btn-ghost btn-xs" onclick="testarConexaoAgent('${s.id}')">Testar</button>
     </div>`;
   }
   // Sem agent
@@ -2377,6 +2384,185 @@ async function verificarTodosAgents() {
     const data = await res.json();
     Object.keys(data).forEach(id => { agentStatus[id] = data[id]; });
   } catch (_) {}
+}
+
+async function testarConexaoAgent(id) {
+  const st = agentStatus[id];
+  if (st) st._testando = true;
+  renderServidores(todosServidores || []);
+  renderServidoresGeral(todosServidoresGeral || []);
+  await verificarAgentStatus(id);
+  if (agentStatus[id]) agentStatus[id]._testando = false;
+  renderServidores(todosServidores || []);
+  renderServidoresGeral(todosServidoresGeral || []);
+}
+
+async function testarTodosAgents() {
+  const allServs = todosServidores.length ? todosServidores : todosServidoresGeral;
+  if (!allServs.length) return;
+
+  // Marcar todos com agent como testando
+  allServs.forEach(s => {
+    const st = agentStatus[s.id];
+    if (st && st.temAgent) st._testando = true;
+  });
+  renderServidores(todosServidores || []);
+  renderServidoresGeral(todosServidoresGeral || []);
+
+  // Testar todos em paralelo
+  await verificarTodosAgents();
+
+  // Limpar flag _testando
+  allServs.forEach(s => {
+    if (agentStatus[s.id]) agentStatus[s.id]._testando = false;
+  });
+  renderServidores(todosServidores || []);
+  renderServidoresGeral(todosServidoresGeral || []);
+
+  // Montar relatorio
+  const atualizados = [];
+  const desatualizados = [];
+  const offline = [];
+  const semAgent = [];
+
+  allServs.forEach(s => {
+    const st = agentStatus[s.id];
+    if (!st || !st.temAgent) {
+      semAgent.push(s);
+    } else if (!st.online) {
+      offline.push({ servidor: s, status: st });
+    } else if (st.desatualizado) {
+      desatualizados.push({ servidor: s, status: st });
+    } else {
+      atualizados.push({ servidor: s, status: st });
+    }
+  });
+
+  // Renderizar modal com relatorio
+  diagModalServidorId = null;
+  document.getElementById('diagModalTitle').textContent = 'Relatorio dos Agents';
+  document.getElementById('diagModalSubtitle').textContent = `${allServs.length} servidores verificados`;
+
+  let html = '';
+
+  if (atualizados.length) {
+    html += `<div class="agent-report-section">
+      <div class="agent-report-header agent-report-ok">${atualizados.length} Online — Atualizados</div>
+      <div class="agent-report-list">`;
+    atualizados.forEach(({ servidor, status }) => {
+      html += `<div class="agent-report-item">
+        <span class="status-dot status-running"></span>
+        <span class="agent-report-name">${esc(servidor.nome)}</span>
+        <span class="agent-report-ip">${esc(servidor.ip)}</span>
+        <span class="agent-report-version">v${esc(status.version || '?')}</span>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  if (desatualizados.length) {
+    html += `<div class="agent-report-section">
+      <div class="agent-report-header agent-report-warn">${desatualizados.length} Online — Desatualizados</div>
+      <div class="agent-report-list">`;
+    desatualizados.forEach(({ servidor, status }) => {
+      html += `<div class="agent-report-item">
+        <span class="status-dot status-warning"></span>
+        <span class="agent-report-name">${esc(servidor.nome)}</span>
+        <span class="agent-report-ip">${esc(servidor.ip)}</span>
+        <span class="agent-report-version agent-report-version-old">v${esc(status.version || '?')}</span>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  if (offline.length) {
+    html += `<div class="agent-report-section">
+      <div class="agent-report-header agent-report-err">${offline.length} Offline</div>
+      <div class="agent-report-list">`;
+    offline.forEach(({ servidor }) => {
+      html += `<div class="agent-report-item">
+        <span class="status-dot status-stopped"></span>
+        <span class="agent-report-name">${esc(servidor.nome)}</span>
+        <span class="agent-report-ip">${esc(servidor.ip)}</span>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  if (semAgent.length) {
+    html += `<div class="agent-report-section">
+      <div class="agent-report-header agent-report-none">${semAgent.length} Sem Agent</div>
+      <div class="agent-report-list">`;
+    semAgent.forEach(s => {
+      html += `<div class="agent-report-item">
+        <span class="agent-report-name" style="color:var(--text-muted)">${esc(s.nome)}</span>
+        <span class="agent-report-ip">${esc(s.ip)}</span>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  document.getElementById('diagModalContent').innerHTML = html;
+  document.getElementById('diagModalActions').style.display = 'flex';
+  let actionsHtml = '<button class="btn btn-ghost" onclick="fecharDiagModal()">Fechar</button>';
+  if (desatualizados.length) {
+    actionsHtml += ` <button class="btn btn-agent" onclick="fecharDiagModal();atualizarTodosAgents()">Atualizar ${desatualizados.length} Desatualizado${desatualizados.length > 1 ? 's' : ''}</button>`;
+  }
+  document.getElementById('diagModalActions').innerHTML = actionsHtml;
+  document.getElementById('diagModalOverlay').classList.add('visible');
+}
+
+function atualizarTodosAgents() {
+  // Abrir diagModal com log
+  diagModalServidorId = null;
+  document.getElementById('diagModalTitle').textContent = 'Atualizando Agents';
+  document.getElementById('diagModalSubtitle').textContent = 'Verificando agents desatualizados...';
+  document.getElementById('diagModalContent').innerHTML = '<div class="deploy-log visible" id="agentUpdateAllLog"></div>';
+  document.getElementById('diagModalActions').style.display = 'none';
+  document.getElementById('diagModalOverlay').classList.add('visible');
+
+  const logEl = document.getElementById('agentUpdateAllLog');
+
+  function appendLog(msg, tipo) {
+    const ts = new Date().toLocaleTimeString('pt-BR');
+    logEl.innerHTML += `<div class="log-${tipo || 'info'}">[${ts}] ${msg}</div>`;
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  const evtSource = new EventSource('/api/agent/atualizar-todos/stream');
+
+  evtSource.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.evento === 'log') {
+        appendLog(data.msg, data.tipo);
+      } else if (data.evento === 'agent_iniciando') {
+        document.getElementById('diagModalSubtitle').textContent = `${data.indice}/${data.total} — ${data.nome}`;
+      } else if (data.evento === 'concluido') {
+        evtSource.close();
+        if (data.ok) {
+          appendLog(data.descricao, 'sucesso');
+        } else {
+          appendLog(data.descricao, data.atualizados > 0 ? 'info' : 'erro');
+        }
+        document.getElementById('diagModalSubtitle').textContent = data.descricao;
+        // Recarregar status dos agents
+        verificarTodosAgents().then(() => {
+          renderServidores(todosServidores || []);
+          renderServidoresGeral(todosServidoresGeral || []);
+        });
+        document.getElementById('diagModalActions').style.display = 'flex';
+        document.getElementById('diagModalActions').innerHTML = `<button class="btn btn-ghost" onclick="fecharDiagModal()">Fechar</button>`;
+      }
+    } catch (_) {}
+  };
+
+  evtSource.onerror = () => {
+    evtSource.close();
+    appendLog('Conexao perdida', 'erro');
+    document.getElementById('diagModalActions').style.display = 'flex';
+    document.getElementById('diagModalActions').innerHTML = `<button class="btn btn-ghost" onclick="fecharDiagModal()">Fechar</button>`;
+  };
 }
 
 async function atualizarAgentModalStatus(id) {

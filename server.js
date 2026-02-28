@@ -3075,7 +3075,217 @@ app.post('/api/agent/:id/instalar', async (req, res) => {
   }
 });
 
-// ── Atualizar agent ──
+// ── Atualizar agent (funcao reutilizavel) ──
+async function atualizarAgentInterno(servidor, servidores, idx, emit) {
+  let ssh;
+  let firewallAberta = false;
+  try {
+    const nssm = `"${AGENT_REMOTE_DIR}\\nssm.exe"`;
+    let usouAgentHTTP = false;
+
+    // Tentar SSH
+    emit(`Conectando via SSH em ${servidor.ip}...`, 'progresso');
+    try {
+      ssh = await conectarSSH(servidor);
+    } catch (sshErr) {
+      emit(`Falha na conexao SSH: ${sshErr.message}`, 'erro');
+
+      // Verificar Agent e versao do Windows para decidir caminho
+      let windowsAntigo = false;
+      const agentSt = await verificarAgent(servidor);
+      if (agentSt.online) {
+        try {
+          const sysInfo = await chamarAgent(servidor, 'GET', '/diagnostico/sistema');
+          const plat = sysInfo.plataforma || '';
+          const verMatch = plat.match(/(\d+)\.\d+/);
+          if (verMatch && parseInt(verMatch[1]) < 10) {
+            windowsAntigo = true;
+            emit(`Windows antigo detectado (${plat}) — DISM nao suportado`, 'info');
+          }
+        } catch (_) {}
+      }
+
+      if (windowsAntigo && agentSt.online) {
+        emit(`Agent online (v${agentSt.version}) — atualizando via HTTP direto...`, 'sucesso');
+        usouAgentHTTP = true;
+      } else {
+        emit('Tentando instalar OpenSSH via WMI/DCOM...', 'progresso');
+        const instalou = await instalarSSHRemoto(servidor, emit);
+        if (instalou) {
+          emit('Tentando conectar via SSH novamente...', 'progresso');
+          try {
+            ssh = await conectarSSH(servidor);
+            firewallAberta = true;
+          } catch (sshErr2) {
+            emit(`SSH falhou apos WMI: ${sshErr2.message}`, 'erro');
+          }
+        }
+
+        if (!ssh) {
+          if (agentSt.online) {
+            emit(`Usando Agent HTTP como fallback (v${agentSt.version})...`, 'progresso');
+            usouAgentHTTP = true;
+          } else {
+            throw new Error('SSH, WMI e Agent offline — impossivel atualizar');
+          }
+        }
+      }
+    }
+
+    if (usouAgentHTTP) {
+      const agentBin = fs.readFileSync(AGENT_EXE_PATH);
+      const sizeMB = (agentBin.length / 1024 / 1024).toFixed(1);
+      emit(`Enviando binario (${sizeMB} MB) via HTTP para Agent...`, 'progresso');
+      const upResult = await chamarAgent(servidor, 'POST', '/update?autoRestart=1', agentBin, 5 * 60 * 1000);
+      if (!upResult.ok) {
+        throw new Error(`Agent rejeitou update: ${upResult.erro || 'erro desconhecido'}`);
+      }
+      emit('Binario salvo no servidor', 'sucesso');
+
+      emit('Aguardando Agent reiniciar...', 'progresso');
+      await new Promise(r => setTimeout(r, 10000));
+
+      let atualizado = false;
+      for (let i = 0; i < 4; i++) {
+        try {
+          const st = await verificarAgent(servidor);
+          if (st.online && st.version === AGENT_EXPECTED_VERSION) {
+            atualizado = true;
+            break;
+          }
+        } catch (_) {}
+        await new Promise(r => setTimeout(r, 3000));
+      }
+
+      if (!atualizado) {
+        emit('Agent nao reiniciou sozinho — trocando binario via WMI...', 'progresso');
+
+        const ip = servidor.ip;
+        const usuario = servidor.usuario;
+        const senhaRaw = decrypt(servidor.senha);
+        const senhaEscaped = senhaRaw.replace(/'/g, "''");
+
+        const swapCmdLine = 'cmd.exe /c nssm.exe stop FDeployAgent & timeout /t 5 /nobreak >nul & taskkill /f /im fdeploy-agent.exe 2>nul & timeout /t 2 /nobreak >nul & del fdeploy-agent_old.exe 2>nul & ren fdeploy-agent.exe fdeploy-agent_old.exe & ren agent_new.exe fdeploy-agent.exe & nssm.exe start FDeployAgent';
+
+        const wmiScript = `
+try {
+  $ErrorActionPreference = 'Stop'
+  $secPass = ConvertTo-SecureString '${senhaEscaped}' -AsPlainText -Force
+  $cred = New-Object System.Management.Automation.PSCredential('${usuario}', $secPass)
+  $so = New-CimSessionOption -Protocol Dcom
+  $session = New-CimSession -ComputerName '${ip}' -Credential $cred -SessionOption $so -OperationTimeoutSec 30
+  $r = Invoke-CimMethod -CimSession $session -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='${swapCmdLine}'; CurrentDirectory='${AGENT_REMOTE_DIR}'}
+  if ($r.ReturnValue -eq 0) { Write-Host "SWAP_OK:PID=$($r.ProcessId)" } else { Write-Host "SWAP_ERRO:$($r.ReturnValue)" }
+  Remove-CimSession $session
+} catch {
+  Write-Host "ERRO:$($_.Exception.Message)"
+}`;
+        const wmiResult = await executarPowerShell(wmiScript, 60000);
+        const wmiOut = (wmiResult.stdout || '').trim();
+        if (wmiOut.includes('SWAP_OK')) {
+          emit('Troca de binario iniciada via WMI — aguardando reinicio...', 'sucesso');
+        } else {
+          emit(`WMI swap: ${wmiOut || wmiResult.stderr || 'falha'}`, 'erro');
+        }
+        await new Promise(r => setTimeout(r, 20000));
+      }
+
+      // Verificar versao final
+      for (let i = 0; i < 6; i++) {
+        try {
+          const st = await verificarAgent(servidor);
+          if (st.online && st.version === AGENT_EXPECTED_VERSION) {
+            servidores[idx].agentVersao = st.version;
+            salvarServidores(servidores);
+            emit(`Agent online — v${st.version}`, 'sucesso');
+            return { ok: true, descricao: 'Agent atualizado via HTTP e online' };
+          }
+          if (st.online) {
+            emit(`Agent v${st.version} (esperada ${AGENT_EXPECTED_VERSION}) — aguardando...`, 'progresso');
+          } else {
+            emit('Agent reiniciando...', 'progresso');
+          }
+        } catch (_) {
+          emit('Agent reiniciando...', 'progresso');
+        }
+        await new Promise(r => setTimeout(r, 5000));
+      }
+      emit('Agent nao confirmou a nova versao', 'erro');
+      return { ok: false, descricao: 'Agent atualizado mas nao confirmou a nova versao — tente novamente' };
+    }
+
+    // Caminho 1/2: via SSH (direto ou apos WMI)
+    emit('Conectado via SSH', 'sucesso');
+
+    // 1. Parar servico
+    emit('Parando servico FDeployAgent...', 'progresso');
+    await ssh.execCommand(`${nssm} stop ${AGENT_SERVICE_NAME}`);
+    await ssh.execCommand(`taskkill /f /im fdeploy-agent.exe 2>nul`);
+    await new Promise(r => setTimeout(r, 2000));
+    emit('Servico parado', 'sucesso');
+
+    // 2. Compactar e enviar novo binario via SFTP
+    emit('Compactando binario...', 'progresso');
+    const tempGz = path.join(UPLOADS_DIR, '_agent_update.gz');
+    const remoteGz = `${AGENT_REMOTE_DIR}\\fdeploy-agent.exe.gz`;
+    const remoteExe = `${AGENT_REMOTE_DIR}\\fdeploy-agent.exe`;
+    const { compSize } = await compactarArquivo(AGENT_EXE_PATH, tempGz);
+    emit(`Enviando binario compactado (${(compSize / 1024 / 1024).toFixed(1)} MB)...`, 'progresso');
+    await ssh.putFile(tempGz, remoteGz);
+    try { fs.unlinkSync(tempGz); } catch (_) {}
+    emit('Descompactando no servidor...', 'progresso');
+    const decResult = await ssh.execCommand(PS_DECOMPRESS(remoteGz, remoteExe));
+    if (decResult.stderr && !decResult.stdout.includes('OK')) {
+      throw new Error(`Falha ao descompactar: ${decResult.stderr}`);
+    }
+    await ssh.execCommand(`del "${remoteGz}" 2>nul`);
+    emit('Binario enviado e descompactado', 'sucesso');
+
+    // 3. Iniciar servico
+    emit('Iniciando servico FDeployAgent...', 'progresso');
+    let startResult = await ssh.execCommand(`${nssm} start ${AGENT_SERVICE_NAME}`);
+    if (startResult.stderr && startResult.stderr.includes('PAUSED')) {
+      emit('Servico em PAUSED — reinstalando via NSSM...', 'progresso');
+      await ssh.execCommand(`${nssm} remove ${AGENT_SERVICE_NAME} confirm`);
+      await new Promise(r => setTimeout(r, 1000));
+      await ssh.execCommand(`${nssm} install ${AGENT_SERVICE_NAME} "${AGENT_REMOTE_DIR}\\fdeploy-agent.exe"`);
+      await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} DisplayName "FDeploy Agent"`);
+      await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} AppDirectory "${AGENT_REMOTE_DIR}"`);
+      await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} Start SERVICE_AUTO_START`);
+      await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} AppExit Default Restart`);
+      await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} AppRestartDelay 5000`);
+      await ssh.execCommand(`${nssm} start ${AGENT_SERVICE_NAME}`);
+      emit('Servico reinstalado e iniciado', 'sucesso');
+    } else {
+      emit('Servico iniciado', 'sucesso');
+    }
+    if (firewallAberta) await removerFirewallSSH(ssh, emit);
+    ssh.dispose();
+
+    // 4. Verificar se voltou online
+    emit('Aguardando Agent ficar online...', 'progresso');
+    await new Promise(r => setTimeout(r, 3000));
+    const status = await verificarAgent(servidor);
+
+    if (status.online) {
+      servidores[idx].agentVersao = status.version || AGENT_EXPECTED_VERSION;
+      salvarServidores(servidores);
+      emit(`Agent online — v${status.version || AGENT_EXPECTED_VERSION}`, 'sucesso');
+      return { ok: true, descricao: 'Agent atualizado e online' };
+    } else {
+      emit('Agent nao respondeu ao ping', 'erro');
+      return { ok: false, descricao: 'Agent atualizado mas offline — pode precisar reiniciar manualmente' };
+    }
+  } catch (err) {
+    if (firewallAberta && ssh) {
+      try { await removerFirewallSSH(ssh, emit); } catch (_) {}
+    }
+    if (ssh) ssh.dispose();
+    emit(`Erro: ${err.message}`, 'erro');
+    return { ok: false, descricao: err.message };
+  }
+}
+
 app.get('/api/agent/:id/atualizar/stream', (req, res) => {
   req.setTimeout(5 * 60 * 1000);
   res.setTimeout(5 * 60 * 1000);
@@ -3097,224 +3307,89 @@ app.get('/api/agent/:id/atualizar/stream', (req, res) => {
   if (!fs.existsSync(AGENT_EXE_PATH)) { emitFim(false, 'fdeploy-agent.exe nao encontrado em dist/'); return; }
 
   (async () => {
-    let ssh;
-    let firewallAberta = false;
+    const result = await atualizarAgentInterno(servidor, servidores, idx, emit);
+    emitFim(result.ok, result.descricao);
+  })();
+
+  req.on('close', () => {});
+});
+
+// ── Atualizar todos os agents desatualizados ──
+app.get('/api/agent/atualizar-todos/stream', (req, res) => {
+  req.setTimeout(30 * 60 * 1000);
+  res.setTimeout(30 * 60 * 1000);
+  res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });
+
+  function emit(msg, tipo) {
+    try { res.write(`data: ${JSON.stringify({ evento: 'log', msg, tipo: tipo || 'info' })}\n\n`); } catch (_) {}
+  }
+  function emitEvento(evento, dados) {
+    try { res.write(`data: ${JSON.stringify({ evento, ...dados })}\n\n`); } catch (_) {}
+  }
+
+  if (!fs.existsSync(AGENT_EXE_PATH)) {
+    emitEvento('concluido', { ok: false, descricao: 'fdeploy-agent.exe nao encontrado em dist/' });
+    res.end();
+    return;
+  }
+
+  (async () => {
     try {
-      const nssm = `"${AGENT_REMOTE_DIR}\\nssm.exe"`;
-      let usouAgentHTTP = false;
+      const servidores = lerServidores();
+      emit('Verificando status dos agents...', 'progresso');
 
-      // Tentar SSH
-      emit(`Conectando via SSH em ${servidor.ip}...`, 'progresso');
-      try {
-        ssh = await conectarSSH(servidor);
-      } catch (sshErr) {
-        emit(`Falha na conexao SSH: ${sshErr.message}`, 'erro');
+      // Verificar todos em paralelo
+      const statusList = await Promise.all(servidores.map(async (s) => {
+        const st = await verificarAgent(s);
+        return { servidor: s, status: st };
+      }));
 
-        // Verificar Agent e versao do Windows para decidir caminho
-        let windowsAntigo = false;
-        const agentSt = await verificarAgent(servidor);
-        if (agentSt.online) {
-          try {
-            const sysInfo = await chamarAgent(servidor, 'GET', '/diagnostico/sistema');
-            const plat = sysInfo.plataforma || '';
-            // Windows_NT 6.x = Server 2012/2008, 10.x = Server 2016+/Win10+
-            const verMatch = plat.match(/(\d+)\.\d+/);
-            if (verMatch && parseInt(verMatch[1]) < 10) {
-              windowsAntigo = true;
-              emit(`Windows antigo detectado (${plat}) — DISM nao suportado`, 'info');
-            }
-          } catch (_) {}
-        }
+      // Filtrar: online + desatualizado
+      const desatualizados = statusList.filter(({ status }) =>
+        status.online && status.version && status.version !== AGENT_EXPECTED_VERSION
+      );
 
-        if (windowsAntigo && agentSt.online) {
-          // Windows antigo: pular WMI/DISM, ir direto para Agent HTTP
-          emit(`Agent online (v${agentSt.version}) — atualizando via HTTP direto...`, 'sucesso');
-          usouAgentHTTP = true;
-        } else {
-          // Windows novo ou Agent offline: tentar WMI normalmente
-          emit('Tentando instalar OpenSSH via WMI/DCOM...', 'progresso');
-          const instalou = await instalarSSHRemoto(servidor, emit);
-          if (instalou) {
-            emit('Tentando conectar via SSH novamente...', 'progresso');
-            try {
-              ssh = await conectarSSH(servidor);
-              firewallAberta = true;
-            } catch (sshErr2) {
-              emit(`SSH falhou apos WMI: ${sshErr2.message}`, 'erro');
-            }
-          }
-
-          // Se SSH e WMI falharam, tentar via Agent HTTP como ultima opcao
-          if (!ssh) {
-            if (agentSt.online) {
-              emit(`Usando Agent HTTP como fallback (v${agentSt.version})...`, 'progresso');
-              usouAgentHTTP = true;
-            } else {
-              throw new Error('SSH, WMI e Agent offline — impossivel atualizar');
-            }
-          }
-        }
-      }
-
-      if (usouAgentHTTP) {
-        // Caminho 3: enviar binario direto via Agent HTTP (POST /update)
-        const agentBin = fs.readFileSync(AGENT_EXE_PATH);
-        const sizeMB = (agentBin.length / 1024 / 1024).toFixed(1);
-        emit(`Enviando binario (${sizeMB} MB) via HTTP para Agent...`, 'progresso');
-        const upResult = await chamarAgent(servidor, 'POST', '/update?autoRestart=1', agentBin, 5 * 60 * 1000);
-        if (!upResult.ok) {
-          throw new Error(`Agent rejeitou update: ${upResult.erro || 'erro desconhecido'}`);
-        }
-        emit('Binario salvo no servidor', 'sucesso');
-
-        // Aguardar — se Agent novo (autoRestart) ele reinicia sozinho
-        emit('Aguardando Agent reiniciar...', 'progresso');
-        await new Promise(r => setTimeout(r, 10000));
-
-        let atualizado = false;
-        for (let i = 0; i < 4; i++) {
-          try {
-            const st = await verificarAgent(servidor);
-            if (st.online && st.version === AGENT_EXPECTED_VERSION) {
-              atualizado = true;
-              break;
-            }
-          } catch (_) {}
-          await new Promise(r => setTimeout(r, 3000));
-        }
-
-        if (!atualizado) {
-          // Agent antigo nao suporta autoRestart — trocar binario via WMI direto
-          emit('Agent nao reiniciou sozinho — trocando binario via WMI...', 'progresso');
-
-          const ip = servidor.ip;
-          const usuario = servidor.usuario;
-          const senhaRaw = decrypt(servidor.senha);
-          const senhaEscaped = senhaRaw.replace(/'/g, "''");
-
-          // Usar CurrentDirectory no Win32_Process.Create para evitar caminhos com espacos
-          // Comandos usam caminhos relativos (nssm.exe, fdeploy-agent.exe estao no mesmo dir)
-          const swapCmdLine = 'cmd.exe /c nssm.exe stop FDeployAgent & timeout /t 5 /nobreak >nul & taskkill /f /im fdeploy-agent.exe 2>nul & timeout /t 2 /nobreak >nul & del fdeploy-agent_old.exe 2>nul & ren fdeploy-agent.exe fdeploy-agent_old.exe & ren agent_new.exe fdeploy-agent.exe & nssm.exe start FDeployAgent';
-
-          const wmiScript = `
-try {
-  $ErrorActionPreference = 'Stop'
-  $secPass = ConvertTo-SecureString '${senhaEscaped}' -AsPlainText -Force
-  $cred = New-Object System.Management.Automation.PSCredential('${usuario}', $secPass)
-  $so = New-CimSessionOption -Protocol Dcom
-  $session = New-CimSession -ComputerName '${ip}' -Credential $cred -SessionOption $so -OperationTimeoutSec 30
-  $r = Invoke-CimMethod -CimSession $session -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='${swapCmdLine}'; CurrentDirectory='${AGENT_REMOTE_DIR}'}
-  if ($r.ReturnValue -eq 0) { Write-Host "SWAP_OK:PID=$($r.ProcessId)" } else { Write-Host "SWAP_ERRO:$($r.ReturnValue)" }
-  Remove-CimSession $session
-} catch {
-  Write-Host "ERRO:$($_.Exception.Message)"
-}`;
-          const wmiResult = await executarPowerShell(wmiScript, 60000);
-          const wmiOut = (wmiResult.stdout || '').trim();
-          if (wmiOut.includes('SWAP_OK')) {
-            emit('Troca de binario iniciada via WMI — aguardando reinicio...', 'sucesso');
-          } else {
-            emit(`WMI swap: ${wmiOut || wmiResult.stderr || 'falha'}`, 'erro');
-          }
-          // Aguardar stop + rename + start (nssm restart delay ~5s)
-          await new Promise(r => setTimeout(r, 20000));
-        }
-
-        // Verificar versao final
-        for (let i = 0; i < 6; i++) {
-          try {
-            const st = await verificarAgent(servidor);
-            if (st.online && st.version === AGENT_EXPECTED_VERSION) {
-              servidores[idx].agentVersao = st.version;
-              salvarServidores(servidores);
-              emit(`Agent online — v${st.version}`, 'sucesso');
-              emitFim(true, 'Agent atualizado via HTTP e online');
-              return;
-            }
-            if (st.online) {
-              emit(`Agent v${st.version} (esperada ${AGENT_EXPECTED_VERSION}) — aguardando...`, 'progresso');
-            } else {
-              emit('Agent reiniciando...', 'progresso');
-            }
-          } catch (_) {
-            emit('Agent reiniciando...', 'progresso');
-          }
-          await new Promise(r => setTimeout(r, 5000));
-        }
-        emit('Agent nao confirmou a nova versao', 'erro');
-        emitFim(false, 'Agent atualizado mas nao confirmou a nova versao — tente novamente');
+      if (desatualizados.length === 0) {
+        emit('Nenhum agent desatualizado encontrado', 'sucesso');
+        emitEvento('concluido', { ok: true, descricao: 'Todos os agents ja estao atualizados', atualizados: 0, falhas: 0, total: 0 });
+        res.end();
         return;
       }
 
-      // Caminho 1/2: via SSH (direto ou apos WMI)
-      emit('Conectado via SSH', 'sucesso');
+      emit(`${desatualizados.length} agent(s) desatualizado(s) encontrado(s)`, 'info');
+      let atualizados = 0;
+      let falhas = 0;
 
-      // 1. Parar servico
-      emit('Parando servico FDeployAgent...', 'progresso');
-      await ssh.execCommand(`${nssm} stop ${AGENT_SERVICE_NAME}`);
-      await ssh.execCommand(`taskkill /f /im fdeploy-agent.exe 2>nul`);
-      await new Promise(r => setTimeout(r, 2000));
-      emit('Servico parado', 'sucesso');
+      for (let i = 0; i < desatualizados.length; i++) {
+        const { servidor } = desatualizados[i];
+        const servidoresAtual = lerServidores();
+        const idx = servidoresAtual.findIndex(s => s.id === servidor.id);
+        if (idx === -1) continue;
 
-      // 2. Compactar e enviar novo binario via SFTP
-      emit('Compactando binario...', 'progresso');
-      const tempGz = path.join(UPLOADS_DIR, '_agent_update.gz');
-      const remoteGz = `${AGENT_REMOTE_DIR}\\fdeploy-agent.exe.gz`;
-      const remoteExe = `${AGENT_REMOTE_DIR}\\fdeploy-agent.exe`;
-      const { compSize } = await compactarArquivo(AGENT_EXE_PATH, tempGz);
-      emit(`Enviando binario compactado (${(compSize / 1024 / 1024).toFixed(1)} MB)...`, 'progresso');
-      await ssh.putFile(tempGz, remoteGz);
-      try { fs.unlinkSync(tempGz); } catch (_) {}
-      emit('Descompactando no servidor...', 'progresso');
-      const decResult = await ssh.execCommand(PS_DECOMPRESS(remoteGz, remoteExe));
-      if (decResult.stderr && !decResult.stdout.includes('OK')) {
-        throw new Error(`Falha ao descompactar: ${decResult.stderr}`);
+        emitEvento('agent_iniciando', { id: servidor.id, nome: servidor.nome, indice: i + 1, total: desatualizados.length });
+        emit(`\n━━━ [${i + 1}/${desatualizados.length}] ${servidor.nome} (${servidor.ip}) ━━━`, 'info');
+
+        const prefixEmit = (msg, tipo) => emit(`[${servidor.nome}] ${msg}`, tipo);
+        const result = await atualizarAgentInterno(servidoresAtual[idx], servidoresAtual, idx, prefixEmit);
+
+        emitEvento('agent_concluido', { id: servidor.id, ok: result.ok, descricao: result.descricao });
+
+        if (result.ok) {
+          atualizados++;
+          emit(`[${servidor.nome}] Concluido com sucesso`, 'sucesso');
+        } else {
+          falhas++;
+          emit(`[${servidor.nome}] Falha: ${result.descricao}`, 'erro');
+        }
       }
-      await ssh.execCommand(`del "${remoteGz}" 2>nul`);
-      emit('Binario enviado e descompactado', 'sucesso');
 
-      // 3. Iniciar servico
-      emit('Iniciando servico FDeployAgent...', 'progresso');
-      let startResult = await ssh.execCommand(`${nssm} start ${AGENT_SERVICE_NAME}`);
-      if (startResult.stderr && startResult.stderr.includes('PAUSED')) {
-        emit('Servico em PAUSED — reinstalando via NSSM...', 'progresso');
-        await ssh.execCommand(`${nssm} remove ${AGENT_SERVICE_NAME} confirm`);
-        await new Promise(r => setTimeout(r, 1000));
-        await ssh.execCommand(`${nssm} install ${AGENT_SERVICE_NAME} "${AGENT_REMOTE_DIR}\\fdeploy-agent.exe"`);
-        await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} DisplayName "FDeploy Agent"`);
-        await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} AppDirectory "${AGENT_REMOTE_DIR}"`);
-        await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} Start SERVICE_AUTO_START`);
-        await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} AppExit Default Restart`);
-        await ssh.execCommand(`${nssm} set ${AGENT_SERVICE_NAME} AppRestartDelay 5000`);
-        await ssh.execCommand(`${nssm} start ${AGENT_SERVICE_NAME}`);
-        emit('Servico reinstalado e iniciado', 'sucesso');
-      } else {
-        emit('Servico iniciado', 'sucesso');
-      }
-      if (firewallAberta) await removerFirewallSSH(ssh, emit);
-      ssh.dispose();
-
-      // 4. Verificar se voltou online
-      emit('Aguardando Agent ficar online...', 'progresso');
-      await new Promise(r => setTimeout(r, 3000));
-      const status = await verificarAgent(servidor);
-
-      if (status.online) {
-        servidores[idx].agentVersao = status.version || AGENT_EXPECTED_VERSION;
-        salvarServidores(servidores);
-        emit(`Agent online — v${status.version || AGENT_EXPECTED_VERSION}`, 'sucesso');
-        emitFim(true, 'Agent atualizado e online');
-      } else {
-        emit('Agent nao respondeu ao ping', 'erro');
-        emitFim(false, 'Agent atualizado mas offline — pode precisar reiniciar manualmente');
-      }
+      emit(`\n━━━ Resultado: ${atualizados} atualizado(s), ${falhas} falha(s) ━━━`, atualizados > 0 ? 'sucesso' : 'info');
+      emitEvento('concluido', { ok: falhas === 0, descricao: `${atualizados} atualizado(s), ${falhas} falha(s)`, atualizados, falhas, total: desatualizados.length });
+      res.end();
     } catch (err) {
-      if (firewallAberta && ssh) {
-        try { await removerFirewallSSH(ssh, emit); } catch (_) {}
-      }
-      if (ssh) ssh.dispose();
-      emit(`Erro: ${err.message}`, 'erro');
-      emitFim(false, err.message);
+      emit(`Erro geral: ${err.message}`, 'erro');
+      emitEvento('concluido', { ok: false, descricao: err.message });
+      res.end();
     }
   })();
 
